@@ -1,0 +1,1175 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1419">
+<title>Termostat</title>
+<style>
+:root{
+  --bg:#0F1419; --surface:#1A212B; --surface2:#252E3A; --line:#2B3440; --line2:#5B6678;
+  --text:#F2F5F8; --muted:#A3AFBD; --orange:#FF8A3D; --orange-bg:#2B2118; --amber:#FFB020;
+  --blue:#4DA3FF; --green:#3DDC97; --red:#E5484D; --red-soft:#FF6B6B; --gray:#7F8B99;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button{font-family:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+#app{position:relative;width:100%;max-width:430px;height:100dvh;margin:0 auto;overflow:hidden;background:var(--bg)}
+.page{position:absolute;inset:0;display:flex;flex-direction:column;gap:12px;padding:calc(20px + env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));overflow-y:auto}
+.hdr{display:flex;align-items:center;gap:4px;min-height:44px;flex:none}
+.hdr h1{margin:0;font-size:22px;font-weight:600;flex:1}
+.iconbtn{width:44px;height:44px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;padding:0;border-radius:12px}
+.hdr .back{margin-left:-10px}
+.sub{font-size:13px;color:var(--muted);margin:2px 0 -6px}
+.card{background:var(--surface);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.muted{color:var(--muted)}
+/* strip */
+.strip{display:flex;align-items:center;height:44px;flex:none}
+.strip .menu{margin-left:-10px}
+.pill{margin-left:8px;width:64px;height:36px;border-radius:18px;border:none;display:flex;align-items:center;justify-content:center;padding:0}
+.pill.red{background:var(--red);color:#fff}.pill.yellow{background:var(--amber);color:#0F1419}.pill.gray{background:var(--line2);color:#fff}
+.strip-r{margin-left:auto;display:flex;align-items:center;gap:16px}
+.strip-r .iconbtn{width:28px;height:28px;border-radius:6px}
+.slot{width:28px;height:28px}
+.ind{display:flex;width:28px;height:28px}
+/* dial */
+.dial{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+.dial svg{max-width:100%;height:auto}
+.outdoor{background:var(--surface);border-radius:20px;height:72px;display:flex;align-items:center;justify-content:center;gap:22px;flex:none}
+.outdoor .g{display:flex;align-items:center;gap:6px;font-size:24px;font-weight:600}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.blink{animation:blink 1s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.blink{animation:none;opacity:.5}}
+/* overlays */
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:20}
+.drawer{position:absolute;top:0;bottom:0;left:0;width:290px;background:#151B23;padding:calc(28px + env(safe-area-inset-top)) 16px 28px;display:flex;flex-direction:column;gap:4px;z-index:21;overflow-y:auto}
+.drawer .ttl{padding:8px 12px 20px}.drawer .ttl b{display:block;font-size:24px;font-weight:600}.drawer .ttl span{font-size:14px;color:var(--muted)}
+.drawer button{height:56px;border:none;border-radius:14px;background:transparent;display:flex;align-items:center;gap:16px;padding:0 14px;font-size:18px;font-weight:500;text-align:left}
+.drawer button.on{background:var(--orange-bg);color:var(--orange);font-weight:600}
+.drawer hr{border:none;border-top:1px solid var(--surface2);margin:8px 12px}
+.balloon{position:absolute;top:calc(72px + env(safe-area-inset-top));width:290px;max-width:calc(100% - 40px);border-radius:14px;padding:14px;z-index:10;border:1px solid transparent}
+.balloon b{display:block;font-size:16px;font-weight:600}.balloon p{margin:4px 0 0;font-size:14px}
+.balloon::before{content:"";position:absolute;top:-7px;width:12px;height:12px;transform:rotate(45deg);background:inherit;border-left:1px solid var(--bc);border-top:1px solid var(--bc)}
+.balloon.red{background:#2B161A;--bc:var(--red);border-color:var(--red)}.balloon.red p{color:#D8BEC2}
+.balloon.yellow{background:#2B2412;--bc:var(--amber);border-color:var(--amber)}.balloon.yellow p{color:#E6D8B4}
+.balloon.gray,.balloon.info{background:#263041;--bc:#263041;border-color:#263041}.balloon.gray p,.balloon.info p{color:var(--muted)}
+.balloon.left{left:20px}.balloon.left::before{left:62px}
+.balloon.right{right:20px}.balloon.right.m::before{right:134px}.balloon.right.p::before{right:90px}
+.balloon .act{margin-top:12px;height:44px;padding:0 20px;border-radius:12px;border:1.5px solid var(--red);background:transparent;font-size:15px;font-weight:600}
+/* forms & lists */
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px}
+.btn{height:56px;border:none;border-radius:28px;background:var(--orange);color:#0F1419;font-size:17px;font-weight:600;flex:none}
+.btn.ghost{background:transparent;border:1.5px solid var(--line2);color:var(--text);height:44px;border-radius:12px;font-size:15px;font-weight:500;padding:0 16px}
+.field{padding:5px 0;display:flex;flex-direction:column;gap:4px}
+.field label{font-size:13px;color:var(--muted)}
+.field input,.field select,.field textarea{height:46px;width:100%;background:var(--surface2);border:none;border-radius:12px;padding:0 14px;color:var(--text);font:inherit;font-size:16px}
+.field textarea{height:auto;min-height:92px;padding:12px 14px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;resize:vertical}
+.field .pw{position:relative}.field .pw button{position:absolute;right:2px;top:1px;width:44px;height:44px;border:none;background:transparent;display:flex;align-items:center;justify-content:center}
+.hint{font-size:12px;color:var(--muted);margin:-2px 0 2px 2px}
+.switch{width:56px;height:32px;border:none;border-radius:16px;background:#3A4452;position:relative;padding:0;flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:left .15s}
+.switch[aria-checked="true"]{background:var(--orange)}.switch[aria-checked="true"]::after{left:27px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.menu-pop{align-self:flex-end;width:210px;background:var(--surface);border-radius:16px;padding:6px 0;margin-top:-4px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.menu-pop button{display:flex;align-items:center;gap:14px;width:100%;height:52px;padding:0 18px;border:none;background:transparent;font-size:17px;text-align:left}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{height:40px;padding:0 14px;border-radius:20px;border:1.5px solid var(--line2);background:transparent;font-size:14px}
+.chip.on{background:var(--orange-bg);border-color:var(--orange);color:var(--orange);font-weight:600}
+/* terminal */
+.log{background:var(--surface);border-radius:14px;padding:10px 12px;height:260px;overflow-y:auto;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
+.log div{padding:3px 0;border-bottom:1px solid var(--surface2)}.log .in{color:#9CC8FF}.log .out{color:var(--orange)}.log .sys{color:var(--muted)}.log .err{color:var(--red-soft)}
+.log time{opacity:.6;margin-right:6px}
+
+.tiles{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:150px;gap:10px;flex:none}
+.tile{border-radius:18px;background:var(--surface);border:2px solid transparent;padding:16px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;text-align:left;color:var(--text)}
+.tile.on{background:var(--orange-bg);border-color:var(--orange);color:var(--orange)}
+.tile b{display:block;font-size:19px;font-weight:600}.tile span{display:block;font-size:13px;color:var(--muted);margin-top:3px}
+.stp{width:64px;height:64px;border:none;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex:none}
+.stp.s{width:44px;height:44px}.stp:disabled{opacity:.35;cursor:default}
+.val{font-weight:600;text-align:center}
+.pillsel{height:44px;padding:0 14px;border-radius:22px;border:1.5px solid var(--line2);background:transparent;display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600}
+.calrow{display:flex;align-items:center;justify-content:space-between;height:48px;border:none;background:transparent;padding:0;width:100%;text-align:left}
+.timebtn{position:relative;height:44px;padding:0 16px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;gap:8px;font-size:18px;font-weight:600}
+.timebtn input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-radius:24px 24px 0 0;padding:12px 20px calc(28px + env(safe-area-inset-bottom));z-index:21}
+.sheet .grab{width:40px;height:4px;border-radius:2px;background:var(--line2);margin:0 auto 14px}
+.sheet .opt{height:56px;display:flex;align-items:center;justify-content:space-between;font-size:17px;width:100%;background:none;border:none;border-bottom:1px solid var(--surface2);text-align:left}
+.sheet .opt.on{color:var(--orange);font-weight:600}
+.note{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.divider{height:1px;background:var(--surface2)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);width:min(390px,calc(100% - 40px));bottom:calc(24px + env(safe-area-inset-bottom));background:#263041;border-radius:14px;padding:12px 14px;font-size:14px;z-index:40}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/*******************************************************************************
+ * Copyright (c) 2013, 2016 IBM Corp.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * and Eclipse Distribution License v1.0 which accompany this distribution.
+ *
+ * The Eclipse Public License is available at
+ *    http://www.eclipse.org/legal/epl-v10.html
+ * and the Eclipse Distribution License is available at
+ *   http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ *******************************************************************************/
+(function(t,q){"object"===typeof exports&&"object"===typeof module?module.exports=q():"function"===typeof define&&define.amd?define(q):"object"===typeof exports?exports=q():t.Paho=q()})(this,function(){return function(t){function q(a,b,c){b[c++]=a>>8;b[c++]=a%256;return c}function r(a,b,c,k){k=q(b,c,k);E(a,c,k);return k+b}function n(a){for(var b=0,c=0;c<a.length;c++){var k=a.charCodeAt(c);2047<k?(55296<=k&&56319>=k&&(c++,b++),b+=3):127<k?b+=2:b++}return b}function E(a,b,c){for(var k=0;k<a.length;k++){var e=
+    a.charCodeAt(k);if(55296<=e&&56319>=e){var g=a.charCodeAt(++k);if(isNaN(g))throw Error(f(h.MALFORMED_UNICODE,[e,g]));e=(e-55296<<10)+(g-56320)+65536}127>=e?b[c++]=e:(2047>=e?b[c++]=e>>6&31|192:(65535>=e?b[c++]=e>>12&15|224:(b[c++]=e>>18&7|240,b[c++]=e>>12&63|128),b[c++]=e>>6&63|128),b[c++]=e&63|128)}return b}function F(a,b,c){for(var k="",e,g=b;g<b+c;){e=a[g++];if(!(128>e)){var m=a[g++]-128;if(0>m)throw Error(f(h.MALFORMED_UTF,[e.toString(16),m.toString(16),""]));if(224>e)e=64*(e-192)+m;else{var d=
+    a[g++]-128;if(0>d)throw Error(f(h.MALFORMED_UTF,[e.toString(16),m.toString(16),d.toString(16)]));if(240>e)e=4096*(e-224)+64*m+d;else{var l=a[g++]-128;if(0>l)throw Error(f(h.MALFORMED_UTF,[e.toString(16),m.toString(16),d.toString(16),l.toString(16)]));if(248>e)e=262144*(e-240)+4096*m+64*d+l;else throw Error(f(h.MALFORMED_UTF,[e.toString(16),m.toString(16),d.toString(16),l.toString(16)]));}}}65535<e&&(e-=65536,k+=String.fromCharCode(55296+(e>>10)),e=56320+(e&1023));k+=String.fromCharCode(e)}return k}
+    var s=t.localStorage||function(){var a={};return{setItem:function(b,c){a[b]=c},getItem:function(b){return a[b]},removeItem:function(b){delete a[b]}}}(),A=function(a,b){for(var c in a)if(a.hasOwnProperty(c))if(b.hasOwnProperty(c)){if(typeof a[c]!==b[c])throw Error(f(h.INVALID_TYPE,[typeof a[c],c]));}else{c="Unknown property, "+c+". Valid properties are:";for(var k in b)b.hasOwnProperty(k)&&(c=c+" "+k);throw Error(c);}},u=function(a,b){return function(){return a.apply(b,arguments)}},h={OK:{code:0,text:"AMQJSC0000I OK."},
+    CONNECT_TIMEOUT:{code:1,text:"AMQJSC0001E Connect timed out."},SUBSCRIBE_TIMEOUT:{code:2,text:"AMQJS0002E Subscribe timed out."},UNSUBSCRIBE_TIMEOUT:{code:3,text:"AMQJS0003E Unsubscribe timed out."},PING_TIMEOUT:{code:4,text:"AMQJS0004E Ping timed out."},INTERNAL_ERROR:{code:5,text:"AMQJS0005E Internal error. Error Message: {0}, Stack trace: {1}"},CONNACK_RETURNCODE:{code:6,text:"AMQJS0006E Bad Connack return code:{0} {1}."},SOCKET_ERROR:{code:7,text:"AMQJS0007E Socket error:{0}."},SOCKET_CLOSE:{code:8,
+    text:"AMQJS0008I Socket closed."},MALFORMED_UTF:{code:9,text:"AMQJS0009E Malformed UTF data:{0} {1} {2}."},UNSUPPORTED:{code:10,text:"AMQJS0010E {0} is not supported by this browser."},INVALID_STATE:{code:11,text:"AMQJS0011E Invalid state {0}."},INVALID_TYPE:{code:12,text:"AMQJS0012E Invalid type {0} for {1}."},INVALID_ARGUMENT:{code:13,text:"AMQJS0013E Invalid argument {0} for {1}."},UNSUPPORTED_OPERATION:{code:14,text:"AMQJS0014E Unsupported operation."},INVALID_STORED_DATA:{code:15,text:"AMQJS0015E Invalid data in local storage key\x3d{0} value\x3d{1}."},
+    INVALID_MQTT_MESSAGE_TYPE:{code:16,text:"AMQJS0016E Invalid MQTT message type {0}."},MALFORMED_UNICODE:{code:17,text:"AMQJS0017E Malformed Unicode string:{0} {1}."},BUFFER_FULL:{code:18,text:"AMQJS0018E Message buffer is full, maximum buffer size: {0}."}},H={0:"Connection Accepted",1:"Connection Refused: unacceptable protocol version",2:"Connection Refused: identifier rejected",3:"Connection Refused: server unavailable",4:"Connection Refused: bad user name or password",5:"Connection Refused: not authorized"},
+    f=function(a,b){var c=a.text;if(b)for(var k,e,g=0;g<b.length;g++)if(k="{"+g+"}",e=c.indexOf(k),0<e)var h=c.substring(0,e),c=c.substring(e+k.length),c=h+b[g]+c;return c},B=[0,6,77,81,73,115,100,112,3],C=[0,4,77,81,84,84,4],p=function(a,b){this.type=a;for(var c in b)b.hasOwnProperty(c)&&(this[c]=b[c])};p.prototype.encode=function(){var a=(this.type&15)<<4,b=0,c=[],k=0,e;void 0!==this.messageIdentifier&&(b+=2);switch(this.type){case 1:switch(this.mqttVersion){case 3:b+=B.length+3;break;case 4:b+=C.length+
+    3}b+=n(this.clientId)+2;void 0!==this.willMessage&&(b+=n(this.willMessage.destinationName)+2,e=this.willMessage.payloadBytes,e instanceof Uint8Array||(e=new Uint8Array(h)),b+=e.byteLength+2);void 0!==this.userName&&(b+=n(this.userName)+2);void 0!==this.password&&(b+=n(this.password)+2);break;case 8:for(var a=a|2,g=0;g<this.topics.length;g++)c[g]=n(this.topics[g]),b+=c[g]+2;b+=this.requestedQos.length;break;case 10:a|=2;for(g=0;g<this.topics.length;g++)c[g]=n(this.topics[g]),b+=c[g]+2;break;case 6:a|=
+    2;break;case 3:this.payloadMessage.duplicate&&(a|=8);a=a|=this.payloadMessage.qos<<1;this.payloadMessage.retained&&(a|=1);var k=n(this.payloadMessage.destinationName),h=this.payloadMessage.payloadBytes,b=b+(k+2)+h.byteLength;h instanceof ArrayBuffer?h=new Uint8Array(h):h instanceof Uint8Array||(h=new Uint8Array(h.buffer))}var f=b,g=Array(1),d=0;do{var z=f%128,f=f>>7;0<f&&(z|=128);g[d++]=z}while(0<f&&4>d);f=g.length+1;b=new ArrayBuffer(b+f);d=new Uint8Array(b);d[0]=a;d.set(g,1);if(3==this.type)f=r(this.payloadMessage.destinationName,
+    k,d,f);else if(1==this.type){switch(this.mqttVersion){case 3:d.set(B,f);f+=B.length;break;case 4:d.set(C,f),f+=C.length}a=0;this.cleanSession&&(a=2);void 0!==this.willMessage&&(a=a|4|this.willMessage.qos<<3,this.willMessage.retained&&(a|=32));void 0!==this.userName&&(a|=128);void 0!==this.password&&(a|=64);d[f++]=a;f=q(this.keepAliveInterval,d,f)}void 0!==this.messageIdentifier&&(f=q(this.messageIdentifier,d,f));switch(this.type){case 1:f=r(this.clientId,n(this.clientId),d,f);void 0!==this.willMessage&&
+    (f=r(this.willMessage.destinationName,n(this.willMessage.destinationName),d,f),f=q(e.byteLength,d,f),d.set(e,f),f+=e.byteLength);void 0!==this.userName&&(f=r(this.userName,n(this.userName),d,f));void 0!==this.password&&r(this.password,n(this.password),d,f);break;case 3:d.set(h,f);break;case 8:for(g=0;g<this.topics.length;g++)f=r(this.topics[g],c[g],d,f),d[f++]=this.requestedQos[g];break;case 10:for(g=0;g<this.topics.length;g++)f=r(this.topics[g],c[g],d,f)}return b};var G=function(a,b){this._client=
+    a;this._keepAliveInterval=1E3*b;this.isReset=!1;var c=(new p(12)).encode(),k=function(a){return function(){return e.apply(a)}},e=function(){this.isReset?(this.isReset=!1,this._client._trace("Pinger.doPing","send PINGREQ"),this._client.socket.send(c),this.timeout=setTimeout(k(this),this._keepAliveInterval)):(this._client._trace("Pinger.doPing","Timed out"),this._client._disconnected(h.PING_TIMEOUT.code,f(h.PING_TIMEOUT)))};this.reset=function(){this.isReset=!0;clearTimeout(this.timeout);0<this._keepAliveInterval&&
+    (this.timeout=setTimeout(k(this),this._keepAliveInterval))};this.cancel=function(){clearTimeout(this.timeout)}},v=function(a,b,c,f){b||(b=30);this.timeout=setTimeout(function(a,b,c){return function(){return a.apply(b,c)}}(c,a,f),1E3*b);this.cancel=function(){clearTimeout(this.timeout)}},d=function(a,b,c,d,e){if(!("WebSocket"in t&&null!==t.WebSocket))throw Error(f(h.UNSUPPORTED,["WebSocket"]));if(!("ArrayBuffer"in t&&null!==t.ArrayBuffer))throw Error(f(h.UNSUPPORTED,["ArrayBuffer"]));this._trace("Paho.Client",
+    a,b,c,d,e);this.host=b;this.port=c;this.path=d;this.uri=a;this.clientId=e;this._wsuri=null;this._localKey=b+":"+c+("/mqtt"!=d?":"+d:"")+":"+e+":";this._msg_queue=[];this._buffered_msg_queue=[];this._sentMessages={};this._receivedMessages={};this._notify_msg_sent={};this._message_identifier=1;this._sequence=0;for(var g in s)0!==g.indexOf("Sent:"+this._localKey)&&0!==g.indexOf("Received:"+this._localKey)||this.restore(g)};d.prototype.host=null;d.prototype.port=null;d.prototype.path=null;d.prototype.uri=
+    null;d.prototype.clientId=null;d.prototype.socket=null;d.prototype.connected=!1;d.prototype.maxMessageIdentifier=65536;d.prototype.connectOptions=null;d.prototype.hostIndex=null;d.prototype.onConnected=null;d.prototype.onConnectionLost=null;d.prototype.onMessageDelivered=null;d.prototype.onMessageArrived=null;d.prototype.traceFunction=null;d.prototype._msg_queue=null;d.prototype._buffered_msg_queue=null;d.prototype._connectTimeout=null;d.prototype.sendPinger=null;d.prototype.receivePinger=null;d.prototype._reconnectInterval=
+    1;d.prototype._reconnecting=!1;d.prototype._reconnectTimeout=null;d.prototype.disconnectedPublishing=!1;d.prototype.disconnectedBufferSize=5E3;d.prototype.receiveBuffer=null;d.prototype._traceBuffer=null;d.prototype._MAX_TRACE_ENTRIES=100;d.prototype.connect=function(a){var b=this._traceMask(a,"password");this._trace("Client.connect",b,this.socket,this.connected);if(this.connected)throw Error(f(h.INVALID_STATE,["already connected"]));if(this.socket)throw Error(f(h.INVALID_STATE,["already connected"]));
+    this._reconnecting&&(this._reconnectTimeout.cancel(),this._reconnectTimeout=null,this._reconnecting=!1);this.connectOptions=a;this._reconnectInterval=1;this._reconnecting=!1;a.uris?(this.hostIndex=0,this._doConnect(a.uris[0])):this._doConnect(this.uri)};d.prototype.subscribe=function(a,b){this._trace("Client.subscribe",a,b);if(!this.connected)throw Error(f(h.INVALID_STATE,["not connected"]));var c=new p(8);c.topics=a.constructor===Array?a:[a];void 0===b.qos&&(b.qos=0);c.requestedQos=[];for(var d=
+    0;d<c.topics.length;d++)c.requestedQos[d]=b.qos;b.onSuccess&&(c.onSuccess=function(a){b.onSuccess({invocationContext:b.invocationContext,grantedQos:a})});b.onFailure&&(c.onFailure=function(a){b.onFailure({invocationContext:b.invocationContext,errorCode:a,errorMessage:f(a)})});b.timeout&&(c.timeOut=new v(this,b.timeout,b.onFailure,[{invocationContext:b.invocationContext,errorCode:h.SUBSCRIBE_TIMEOUT.code,errorMessage:f(h.SUBSCRIBE_TIMEOUT)}]));this._requires_ack(c);this._schedule_message(c)};d.prototype.unsubscribe=
+    function(a,b){this._trace("Client.unsubscribe",a,b);if(!this.connected)throw Error(f(h.INVALID_STATE,["not connected"]));var c=new p(10);c.topics=a.constructor===Array?a:[a];b.onSuccess&&(c.callback=function(){b.onSuccess({invocationContext:b.invocationContext})});b.timeout&&(c.timeOut=new v(this,b.timeout,b.onFailure,[{invocationContext:b.invocationContext,errorCode:h.UNSUBSCRIBE_TIMEOUT.code,errorMessage:f(h.UNSUBSCRIBE_TIMEOUT)}]));this._requires_ack(c);this._schedule_message(c)};d.prototype.send=
+    function(a){this._trace("Client.send",a);var b=new p(3);b.payloadMessage=a;if(this.connected)0<a.qos?this._requires_ack(b):this.onMessageDelivered&&(this._notify_msg_sent[b]=this.onMessageDelivered(b.payloadMessage)),this._schedule_message(b);else if(this._reconnecting&&this.disconnectedPublishing){if(Object.keys(this._sentMessages).length+this._buffered_msg_queue.length>this.disconnectedBufferSize)throw Error(f(h.BUFFER_FULL,[this.disconnectedBufferSize]));0<a.qos?this._requires_ack(b):(b.sequence=
+    ++this._sequence,this._buffered_msg_queue.unshift(b))}else throw Error(f(h.INVALID_STATE,["not connected"]));};d.prototype.disconnect=function(){this._trace("Client.disconnect");this._reconnecting&&(this._reconnectTimeout.cancel(),this._reconnectTimeout=null,this._reconnecting=!1);if(!this.socket)throw Error(f(h.INVALID_STATE,["not connecting or connected"]));var a=new p(14);this._notify_msg_sent[a]=u(this._disconnected,this);this._schedule_message(a)};d.prototype.getTraceLog=function(){if(null!==
+    this._traceBuffer){this._trace("Client.getTraceLog",new Date);this._trace("Client.getTraceLog in flight messages",this._sentMessages.length);for(var a in this._sentMessages)this._trace("_sentMessages ",a,this._sentMessages[a]);for(a in this._receivedMessages)this._trace("_receivedMessages ",a,this._receivedMessages[a]);return this._traceBuffer}};d.prototype.startTrace=function(){null===this._traceBuffer&&(this._traceBuffer=[]);this._trace("Client.startTrace",new Date,"1.1.0-2018-11-22T11:35:36Z")};d.prototype.stopTrace=
+    function(){delete this._traceBuffer};d.prototype._doConnect=function(a){this.connectOptions.useSSL&&(a=a.split(":"),a[0]="wss",a=a.join(":"));this._wsuri=a;this.connected=!1;this.socket=4>this.connectOptions.mqttVersion?new WebSocket(a,["mqttv3.1"]):new WebSocket(a,["mqtt"]);this.socket.binaryType="arraybuffer";this.socket.onopen=u(this._on_socket_open,this);this.socket.onmessage=u(this._on_socket_message,this);this.socket.onerror=u(this._on_socket_error,this);this.socket.onclose=u(this._on_socket_close,
+    this);this.sendPinger=new G(this,this.connectOptions.keepAliveInterval);this.receivePinger=new G(this,this.connectOptions.keepAliveInterval);this._connectTimeout&&(this._connectTimeout.cancel(),this._connectTimeout=null);this._connectTimeout=new v(this,this.connectOptions.timeout,this._disconnected,[h.CONNECT_TIMEOUT.code,f(h.CONNECT_TIMEOUT)])};d.prototype._schedule_message=function(a){this._msg_queue.unshift(a);this.connected&&this._process_queue()};d.prototype.store=function(a,b){var c={type:b.type,
+    messageIdentifier:b.messageIdentifier,version:1};switch(b.type){case 3:b.pubRecReceived&&(c.pubRecReceived=!0);c.payloadMessage={};for(var d="",e=b.payloadMessage.payloadBytes,g=0;g<e.length;g++)d=15>=e[g]?d+"0"+e[g].toString(16):d+e[g].toString(16);c.payloadMessage.payloadHex=d;c.payloadMessage.qos=b.payloadMessage.qos;c.payloadMessage.destinationName=b.payloadMessage.destinationName;b.payloadMessage.duplicate&&(c.payloadMessage.duplicate=!0);b.payloadMessage.retained&&(c.payloadMessage.retained=
+    !0);0===a.indexOf("Sent:")&&(void 0===b.sequence&&(b.sequence=++this._sequence),c.sequence=b.sequence);break;default:throw Error(f(h.INVALID_STORED_DATA,[a+this._localKey+b.messageIdentifier,c]));}s.setItem(a+this._localKey+b.messageIdentifier,JSON.stringify(c))};d.prototype.restore=function(a){var b=s.getItem(a),c=JSON.parse(b),d=new p(c.type,c);switch(c.type){case 3:for(var b=c.payloadMessage.payloadHex,e=new ArrayBuffer(b.length/2),e=new Uint8Array(e),g=0;2<=b.length;){var m=parseInt(b.substring(0,
+    2),16),b=b.substring(2,b.length);e[g++]=m}b=new w(e);b.qos=c.payloadMessage.qos;b.destinationName=c.payloadMessage.destinationName;c.payloadMessage.duplicate&&(b.duplicate=!0);c.payloadMessage.retained&&(b.retained=!0);d.payloadMessage=b;break;default:throw Error(f(h.INVALID_STORED_DATA,[a,b]));}0===a.indexOf("Sent:"+this._localKey)?(d.payloadMessage.duplicate=!0,this._sentMessages[d.messageIdentifier]=d):0===a.indexOf("Received:"+this._localKey)&&(this._receivedMessages[d.messageIdentifier]=d)};
+    d.prototype._process_queue=function(){for(var a=null;a=this._msg_queue.pop();)this._socket_send(a),this._notify_msg_sent[a]&&(this._notify_msg_sent[a](),delete this._notify_msg_sent[a])};d.prototype._requires_ack=function(a){var b=Object.keys(this._sentMessages).length;if(b>this.maxMessageIdentifier)throw Error("Too many messages:"+b);for(;void 0!==this._sentMessages[this._message_identifier];)this._message_identifier++;a.messageIdentifier=this._message_identifier;this._sentMessages[a.messageIdentifier]=
+    a;3===a.type&&this.store("Sent:",a);this._message_identifier===this.maxMessageIdentifier&&(this._message_identifier=1)};d.prototype._on_socket_open=function(){var a=new p(1,this.connectOptions);a.clientId=this.clientId;this._socket_send(a)};d.prototype._on_socket_message=function(a){this._trace("Client._on_socket_message",a.data);a=this._deframeMessages(a.data);for(var b=0;b<a.length;b+=1)this._handleMessage(a[b])};d.prototype._deframeMessages=function(a){a=new Uint8Array(a);var b=[];if(this.receiveBuffer){var c=
+    new Uint8Array(this.receiveBuffer.length+a.length);c.set(this.receiveBuffer);c.set(a,this.receiveBuffer.length);a=c;delete this.receiveBuffer}try{for(c=0;c<a.length;){var d;a:{var e=a,g=c,m=g,n=e[g],l=n>>4,z=n&15,g=g+1,x=void 0,D=0,q=1;do{if(g==e.length){d=[null,m];break a}x=e[g++];D+=(x&127)*q;q*=128}while(0!==(x&128));x=g+D;if(x>e.length)d=[null,m];else{var y=new p(l);switch(l){case 2:e[g++]&1&&(y.sessionPresent=!0);y.returnCode=e[g++];break;case 3:var m=z>>1&3,s=256*e[g]+e[g+1],g=g+2,t=F(e,g,s),
+    g=g+s;0<m&&(y.messageIdentifier=256*e[g]+e[g+1],g+=2);var r=new w(e.subarray(g,x));1==(z&1)&&(r.retained=!0);8==(z&8)&&(r.duplicate=!0);r.qos=m;r.destinationName=t;y.payloadMessage=r;break;case 4:case 5:case 6:case 7:case 11:y.messageIdentifier=256*e[g]+e[g+1];break;case 9:y.messageIdentifier=256*e[g]+e[g+1],g+=2,y.returnCode=e.subarray(g,x)}d=[y,x]}}var u=d[0],c=d[1];if(null!==u)b.push(u);else break}c<a.length&&(this.receiveBuffer=a.subarray(c))}catch(v){d="undefined"==v.hasOwnProperty("stack")?
+    v.stack.toString():"No Error Stack Available";this._disconnected(h.INTERNAL_ERROR.code,f(h.INTERNAL_ERROR,[v.message,d]));return}return b};d.prototype._handleMessage=function(a){this._trace("Client._handleMessage",a);try{switch(a.type){case 2:this._connectTimeout.cancel();this._reconnectTimeout&&this._reconnectTimeout.cancel();if(this.connectOptions.cleanSession){for(var b in this._sentMessages){var c=this._sentMessages[b];s.removeItem("Sent:"+this._localKey+c.messageIdentifier)}this._sentMessages=
+    {};for(b in this._receivedMessages){var d=this._receivedMessages[b];s.removeItem("Received:"+this._localKey+d.messageIdentifier)}this._receivedMessages={}}if(0===a.returnCode)this.connected=!0,this.connectOptions.uris&&(this.hostIndex=this.connectOptions.uris.length);else{this._disconnected(h.CONNACK_RETURNCODE.code,f(h.CONNACK_RETURNCODE,[a.returnCode,H[a.returnCode]]));break}a=[];for(var e in this._sentMessages)this._sentMessages.hasOwnProperty(e)&&a.push(this._sentMessages[e]);if(0<this._buffered_msg_queue.length)for(e=
+    null;e=this._buffered_msg_queue.pop();)a.push(e),this.onMessageDelivered&&(this._notify_msg_sent[e]=this.onMessageDelivered(e.payloadMessage));a=a.sort(function(a,b){return a.sequence-b.sequence});e=0;for(var g=a.length;e<g;e++)if(c=a[e],3==c.type&&c.pubRecReceived){var m=new p(6,{messageIdentifier:c.messageIdentifier});this._schedule_message(m)}else this._schedule_message(c);if(this.connectOptions.onSuccess)this.connectOptions.onSuccess({invocationContext:this.connectOptions.invocationContext});
+    c=!1;this._reconnecting&&(c=!0,this._reconnectInterval=1,this._reconnecting=!1);this._connected(c,this._wsuri);this._process_queue();break;case 3:this._receivePublish(a);break;case 4:if(c=this._sentMessages[a.messageIdentifier])if(delete this._sentMessages[a.messageIdentifier],s.removeItem("Sent:"+this._localKey+a.messageIdentifier),this.onMessageDelivered)this.onMessageDelivered(c.payloadMessage);break;case 5:if(c=this._sentMessages[a.messageIdentifier])c.pubRecReceived=!0,m=new p(6,{messageIdentifier:a.messageIdentifier}),
+    this.store("Sent:",c),this._schedule_message(m);break;case 6:d=this._receivedMessages[a.messageIdentifier];s.removeItem("Received:"+this._localKey+a.messageIdentifier);d&&(this._receiveMessage(d),delete this._receivedMessages[a.messageIdentifier]);var n=new p(7,{messageIdentifier:a.messageIdentifier});this._schedule_message(n);break;case 7:c=this._sentMessages[a.messageIdentifier];delete this._sentMessages[a.messageIdentifier];s.removeItem("Sent:"+this._localKey+a.messageIdentifier);if(this.onMessageDelivered)this.onMessageDelivered(c.payloadMessage);
+    break;case 9:if(c=this._sentMessages[a.messageIdentifier]){c.timeOut&&c.timeOut.cancel();if(128===a.returnCode[0]){if(c.onFailure)c.onFailure(a.returnCode)}else if(c.onSuccess)c.onSuccess(a.returnCode);delete this._sentMessages[a.messageIdentifier]}break;case 11:if(c=this._sentMessages[a.messageIdentifier])c.timeOut&&c.timeOut.cancel(),c.callback&&c.callback(),delete this._sentMessages[a.messageIdentifier];break;case 13:this.sendPinger.reset();break;case 14:this._disconnected(h.INVALID_MQTT_MESSAGE_TYPE.code,
+    f(h.INVALID_MQTT_MESSAGE_TYPE,[a.type]));break;default:this._disconnected(h.INVALID_MQTT_MESSAGE_TYPE.code,f(h.INVALID_MQTT_MESSAGE_TYPE,[a.type]))}}catch(l){c="undefined"==l.hasOwnProperty("stack")?l.stack.toString():"No Error Stack Available",this._disconnected(h.INTERNAL_ERROR.code,f(h.INTERNAL_ERROR,[l.message,c]))}};d.prototype._on_socket_error=function(a){this._reconnecting||this._disconnected(h.SOCKET_ERROR.code,f(h.SOCKET_ERROR,[a.data]))};d.prototype._on_socket_close=function(){this._reconnecting||
+    this._disconnected(h.SOCKET_CLOSE.code,f(h.SOCKET_CLOSE))};d.prototype._socket_send=function(a){if(1==a.type){var b=this._traceMask(a,"password");this._trace("Client._socket_send",b)}else this._trace("Client._socket_send",a);this.socket.send(a.encode());this.sendPinger.reset()};d.prototype._receivePublish=function(a){switch(a.payloadMessage.qos){case "undefined":case 0:this._receiveMessage(a);break;case 1:var b=new p(4,{messageIdentifier:a.messageIdentifier});this._schedule_message(b);this._receiveMessage(a);
+    break;case 2:this._receivedMessages[a.messageIdentifier]=a;this.store("Received:",a);a=new p(5,{messageIdentifier:a.messageIdentifier});this._schedule_message(a);break;default:throw Error("Invaild qos\x3d"+a.payloadMessage.qos);}};d.prototype._receiveMessage=function(a){if(this.onMessageArrived)this.onMessageArrived(a.payloadMessage)};d.prototype._connected=function(a,b){if(this.onConnected)this.onConnected(a,b)};d.prototype._reconnect=function(){this._trace("Client._reconnect");this.connected||(this._reconnecting=
+    !0,this.sendPinger.cancel(),this.receivePinger.cancel(),128>this._reconnectInterval&&(this._reconnectInterval*=2),this.connectOptions.uris?(this.hostIndex=0,this._doConnect(this.connectOptions.uris[0])):this._doConnect(this.uri))};d.prototype._disconnected=function(a,b){this._trace("Client._disconnected",a,b);if(void 0!==a&&this._reconnecting)this._reconnectTimeout=new v(this,this._reconnectInterval,this._reconnect);else if(this.sendPinger.cancel(),this.receivePinger.cancel(),this._connectTimeout&&
+    (this._connectTimeout.cancel(),this._connectTimeout=null),this._msg_queue=[],this._buffered_msg_queue=[],this._notify_msg_sent={},this.socket&&(this.socket.onopen=null,this.socket.onmessage=null,this.socket.onerror=null,this.socket.onclose=null,1===this.socket.readyState&&this.socket.close(),delete this.socket),this.connectOptions.uris&&this.hostIndex<this.connectOptions.uris.length-1)this.hostIndex++,this._doConnect(this.connectOptions.uris[this.hostIndex]);else if(void 0===a&&(a=h.OK.code,b=f(h.OK)),
+    this.connected){this.connected=!1;if(this.onConnectionLost)this.onConnectionLost({errorCode:a,errorMessage:b,reconnect:this.connectOptions.reconnect,uri:this._wsuri});a!==h.OK.code&&this.connectOptions.reconnect&&(this._reconnectInterval=1,this._reconnect())}else if(4===this.connectOptions.mqttVersion&&!1===this.connectOptions.mqttVersionExplicit)this._trace("Failed to connect V4, dropping back to V3"),this.connectOptions.mqttVersion=3,this.connectOptions.uris?(this.hostIndex=0,this._doConnect(this.connectOptions.uris[0])):
+    this._doConnect(this.uri);else if(this.connectOptions.onFailure)this.connectOptions.onFailure({invocationContext:this.connectOptions.invocationContext,errorCode:a,errorMessage:b})};d.prototype._trace=function(){if(this.traceFunction){var a=Array.prototype.slice.call(arguments),b;for(b in a)"undefined"!==typeof a[b]&&a.splice(b,1,JSON.stringify(a[b]));b=a.join("");this.traceFunction({severity:"Debug",message:b})}if(null!==this._traceBuffer)for(b=0,a=arguments.length;b<a;b++)this._traceBuffer.length==
+    this._MAX_TRACE_ENTRIES&&this._traceBuffer.shift(),0===b?this._traceBuffer.push(arguments[b]):"undefined"===typeof arguments[b]?this._traceBuffer.push(arguments[b]):this._traceBuffer.push("  "+JSON.stringify(arguments[b]))};d.prototype._traceMask=function(a,b){var c={},d;for(d in a)a.hasOwnProperty(d)&&(c[d]=d==b?"******":a[d]);return c};var w=function(a){var b;if("string"===typeof a||a instanceof ArrayBuffer||ArrayBuffer.isView(a)&&!(a instanceof DataView))b=a;else throw f(h.INVALID_ARGUMENT,[a,
+    "newPayload"]);var c,d=0,e=!1,g=!1;Object.defineProperties(this,{payloadString:{enumerable:!0,get:function(){return"string"===typeof b?b:F(b,0,b.length)}},payloadBytes:{enumerable:!0,get:function(){if("string"===typeof b){var a=new ArrayBuffer(n(b)),a=new Uint8Array(a);E(b,a,0);return a}return b}},destinationName:{enumerable:!0,get:function(){return c},set:function(a){if("string"===typeof a)c=a;else throw Error(f(h.INVALID_ARGUMENT,[a,"newDestinationName"]));}},qos:{enumerable:!0,get:function(){return d},
+    set:function(a){if(0===a||1===a||2===a)d=a;else throw Error("Invalid argument:"+a);}},retained:{enumerable:!0,get:function(){return e},set:function(a){if("boolean"===typeof a)e=a;else throw Error(f(h.INVALID_ARGUMENT,[a,"newRetained"]));}},topic:{enumerable:!0,get:function(){return c},set:function(a){c=a}},duplicate:{enumerable:!0,get:function(){return g},set:function(a){g=a}}})};return{Client:function(a,b,c,k){var e;if("string"!==typeof a)throw Error(f(h.INVALID_TYPE,[typeof a,"host"]));if(2==arguments.length){k=
+    b;e=a;var g=e.match(/^(wss?):\/\/((\[(.+)\])|([^\/]+?))(:(\d+))?(\/.*)$/);if(g)a=g[4]||g[2],b=parseInt(g[7]),c=g[8];else throw Error(f(h.INVALID_ARGUMENT,[a,"host"]));}else{3==arguments.length&&(k=c,c="/mqtt");if("number"!==typeof b||0>b)throw Error(f(h.INVALID_TYPE,[typeof b,"port"]));if("string"!==typeof c)throw Error(f(h.INVALID_TYPE,[typeof c,"path"]));e="ws://"+(-1!==a.indexOf(":")&&"["!==a.slice(0,1)&&"]"!==a.slice(-1)?"["+a+"]":a)+":"+b+c}for(var m=g=0;m<k.length;m++){var n=k.charCodeAt(m);
+    55296<=n&&56319>=n&&m++;g++}if("string"!==typeof k||65535<g)throw Error(f(h.INVALID_ARGUMENT,[k,"clientId"]));var l=new d(e,a,b,c,k);Object.defineProperties(this,{host:{get:function(){return a},set:function(){throw Error(f(h.UNSUPPORTED_OPERATION));}},port:{get:function(){return b},set:function(){throw Error(f(h.UNSUPPORTED_OPERATION));}},path:{get:function(){return c},set:function(){throw Error(f(h.UNSUPPORTED_OPERATION));}},uri:{get:function(){return e},set:function(){throw Error(f(h.UNSUPPORTED_OPERATION));
+    }},clientId:{get:function(){return l.clientId},set:function(){throw Error(f(h.UNSUPPORTED_OPERATION));}},onConnected:{get:function(){return l.onConnected},set:function(a){if("function"===typeof a)l.onConnected=a;else throw Error(f(h.INVALID_TYPE,[typeof a,"onConnected"]));}},disconnectedPublishing:{get:function(){return l.disconnectedPublishing},set:function(a){l.disconnectedPublishing=a}},disconnectedBufferSize:{get:function(){return l.disconnectedBufferSize},set:function(a){l.disconnectedBufferSize=
+    a}},onConnectionLost:{get:function(){return l.onConnectionLost},set:function(a){if("function"===typeof a)l.onConnectionLost=a;else throw Error(f(h.INVALID_TYPE,[typeof a,"onConnectionLost"]));}},onMessageDelivered:{get:function(){return l.onMessageDelivered},set:function(a){if("function"===typeof a)l.onMessageDelivered=a;else throw Error(f(h.INVALID_TYPE,[typeof a,"onMessageDelivered"]));}},onMessageArrived:{get:function(){return l.onMessageArrived},set:function(a){if("function"===typeof a)l.onMessageArrived=
+    a;else throw Error(f(h.INVALID_TYPE,[typeof a,"onMessageArrived"]));}},trace:{get:function(){return l.traceFunction},set:function(a){if("function"===typeof a)l.traceFunction=a;else throw Error(f(h.INVALID_TYPE,[typeof a,"onTrace"]));}}});this.connect=function(a){a=a||{};A(a,{timeout:"number",userName:"string",password:"string",willMessage:"object",keepAliveInterval:"number",cleanSession:"boolean",useSSL:"boolean",invocationContext:"object",onSuccess:"function",onFailure:"function",hosts:"object",
+    ports:"object",reconnect:"boolean",mqttVersion:"number",mqttVersionExplicit:"boolean",uris:"object"});void 0===a.keepAliveInterval&&(a.keepAliveInterval=60);if(4<a.mqttVersion||3>a.mqttVersion)throw Error(f(h.INVALID_ARGUMENT,[a.mqttVersion,"connectOptions.mqttVersion"]));void 0===a.mqttVersion?(a.mqttVersionExplicit=!1,a.mqttVersion=4):a.mqttVersionExplicit=!0;if(void 0!==a.password&&void 0===a.userName)throw Error(f(h.INVALID_ARGUMENT,[a.password,"connectOptions.password"]));if(a.willMessage){if(!(a.willMessage instanceof
+    w))throw Error(f(h.INVALID_TYPE,[a.willMessage,"connectOptions.willMessage"]));a.willMessage.stringPayload=null;if("undefined"===typeof a.willMessage.destinationName)throw Error(f(h.INVALID_TYPE,[typeof a.willMessage.destinationName,"connectOptions.willMessage.destinationName"]));}"undefined"===typeof a.cleanSession&&(a.cleanSession=!0);if(a.hosts){if(!(a.hosts instanceof Array))throw Error(f(h.INVALID_ARGUMENT,[a.hosts,"connectOptions.hosts"]));if(1>a.hosts.length)throw Error(f(h.INVALID_ARGUMENT,
+    [a.hosts,"connectOptions.hosts"]));for(var b=!1,d=0;d<a.hosts.length;d++){if("string"!==typeof a.hosts[d])throw Error(f(h.INVALID_TYPE,[typeof a.hosts[d],"connectOptions.hosts["+d+"]"]));if(/^(wss?):\/\/((\[(.+)\])|([^\/]+?))(:(\d+))?(\/.*)$/.test(a.hosts[d]))if(0===d)b=!0;else{if(!b)throw Error(f(h.INVALID_ARGUMENT,[a.hosts[d],"connectOptions.hosts["+d+"]"]));}else if(b)throw Error(f(h.INVALID_ARGUMENT,[a.hosts[d],"connectOptions.hosts["+d+"]"]));}if(b)a.uris=a.hosts;else{if(!a.ports)throw Error(f(h.INVALID_ARGUMENT,
+    [a.ports,"connectOptions.ports"]));if(!(a.ports instanceof Array))throw Error(f(h.INVALID_ARGUMENT,[a.ports,"connectOptions.ports"]));if(a.hosts.length!==a.ports.length)throw Error(f(h.INVALID_ARGUMENT,[a.ports,"connectOptions.ports"]));a.uris=[];for(d=0;d<a.hosts.length;d++){if("number"!==typeof a.ports[d]||0>a.ports[d])throw Error(f(h.INVALID_TYPE,[typeof a.ports[d],"connectOptions.ports["+d+"]"]));var b=a.hosts[d],g=a.ports[d];e="ws://"+(-1!==b.indexOf(":")?"["+b+"]":b)+":"+g+c;a.uris.push(e)}}}l.connect(a)};
+    this.subscribe=function(a,b){if("string"!==typeof a&&a.constructor!==Array)throw Error("Invalid argument:"+a);b=b||{};A(b,{qos:"number",invocationContext:"object",onSuccess:"function",onFailure:"function",timeout:"number"});if(b.timeout&&!b.onFailure)throw Error("subscribeOptions.timeout specified with no onFailure callback.");if("undefined"!==typeof b.qos&&0!==b.qos&&1!==b.qos&&2!==b.qos)throw Error(f(h.INVALID_ARGUMENT,[b.qos,"subscribeOptions.qos"]));l.subscribe(a,b)};this.unsubscribe=function(a,
+    b){if("string"!==typeof a&&a.constructor!==Array)throw Error("Invalid argument:"+a);b=b||{};A(b,{invocationContext:"object",onSuccess:"function",onFailure:"function",timeout:"number"});if(b.timeout&&!b.onFailure)throw Error("unsubscribeOptions.timeout specified with no onFailure callback.");l.unsubscribe(a,b)};this.send=function(a,b,c,d){var e;if(0===arguments.length)throw Error("Invalid argument.length");if(1==arguments.length){if(!(a instanceof w)&&"string"!==typeof a)throw Error("Invalid argument:"+
+    typeof a);e=a;if("undefined"===typeof e.destinationName)throw Error(f(h.INVALID_ARGUMENT,[e.destinationName,"Message.destinationName"]));}else e=new w(b),e.destinationName=a,3<=arguments.length&&(e.qos=c),4<=arguments.length&&(e.retained=d);l.send(e)};this.publish=function(a,b,c,d){var e;if(0===arguments.length)throw Error("Invalid argument.length");if(1==arguments.length){if(!(a instanceof w)&&"string"!==typeof a)throw Error("Invalid argument:"+typeof a);e=a;if("undefined"===typeof e.destinationName)throw Error(f(h.INVALID_ARGUMENT,
+    [e.destinationName,"Message.destinationName"]));}else e=new w(b),e.destinationName=a,3<=arguments.length&&(e.qos=c),4<=arguments.length&&(e.retained=d);l.send(e)};this.disconnect=function(){l.disconnect()};this.getTraceLog=function(){return l.getTraceLog()};this.startTrace=function(){l.startTrace()};this.stopTrace=function(){l.stopTrace()};this.isConnected=function(){return l.connected}},Message:w}}("undefined"!==typeof global?global:"undefined"!==typeof self?self:"undefined"!==typeof window?window:
+    {})});
+</script>
+<script>
+'use strict';
+/* ===== Termostat paneli · adım 1: iskelet, bağlantı, ana ekran, Broker, Terminal ===== */
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const nv = x => (x === null || x === undefined || x === '' || Number.isNaN(Number(x)));
+const f1 = x => nv(x) ? '—' : Number(x).toFixed(1);
+
+/* ---------- Simgeler ---------- */
+const p = d => `<path d="${d}"/>`;
+const WIFI = 'M5 12a10 10 0 0 1 14 0M8 15a6 6 0 0 1 8 0';
+const FLAME = 'M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z';
+const ICON = {
+  menu: p('M4 6h16M4 12h16M4 18h16'), back: p('M15 18l-6-6 6-6'), plus: p('M12 5v14M5 12h14'), minus: p('M5 12h14'),
+  more: '<circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>',
+  edit: p('M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z'), trash: p('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6'),
+  plug: p('M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4'),
+  wifi: p(WIFI) + '<circle cx="12" cy="19" r="1"/>', wifioff: p(WIFI + 'M3 3l18 18') + '<circle cx="12" cy="19" r="1"/>',
+  cloudoff: p('m2 2 20 20M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07'),
+  thermo: p('M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z'), thermooff: p('M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0zM3 3l18 18'),
+  drop: p('M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z'),
+  suncloud: p('M12 2v2M4.93 4.93l1.41 1.41M20 12h2M19.07 4.93l-1.41 1.41M15.947 12.65a4 4 0 0 0-5.925-4.128M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z'),
+  flame: p(FLAME), flameoff: p(FLAME + 'M3 3l18 18'), power: p('M12 2v10M18.4 6.6a9 9 0 1 1-12.77.04'),
+  hand: p('M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15'),
+  cal: '<rect x="4" y="5" width="16" height="15" rx="2"/>' + p('M4 10h16M9 3v4M15 3v4'),
+  houseout: p('M3 12l8-7.5 8 7.5M5 10.5V20a1 1 0 0 0 1 1h5M17 10.5V13M11 17h11M18.5 13.5L22 17l-3.5 3.5'),
+  sun: '<circle cx="12" cy="12" r="4"/>' + p('M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4'),
+  leaf: p('M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z') + p('M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12'),
+  moon: p('M7.9 3.43A9.5 9.5 0 1 0 20.57 16.1A9 9 0 0 1 7.9 3.43Z'),
+  window: p('M4 3h8v18H4z') + p('M12 3l8 2.5v13L12 21z'),
+  eye: p('M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z') + '<circle cx="12" cy="12" r="3"/>',
+  down: p('M6 9l6 6 6-6'), right: p('M9 6l6 6-6 6'), check: p('M5 12l5 5 9-10'), bell: p('M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0'),
+  info: '<circle cx="12" cy="12" r="9"/>' + p('M12 11v5M12 8v.01'), home: p('M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z'),
+  sliders: p('M4 7h10M18 7h2M4 17h2M10 17h10') + '<circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>', chart: p('M3 3v18h18M7 15l4-4 3 3 5-6'),
+  gear: '<circle cx="12" cy="12" r="3"/>' + p('M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'),
+  cloud: p('M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z'), terminal: p('M4 17l6-5-6-5M12 19h8'),
+  warn: p('M12 3l10 18H2zM12 10v5M12 18v.01'), bat: p('M2 9a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zM21 10.5v3'),
+  batq: p('M2 9a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zM21 10.5v3M9.5 10.5a1.6 1.6 0 1 1 2.2 1.5c-.6.3-.9.7-.9 1.3M10.8 15v.01'),
+};
+function ic(n, size = 24, color = 'currentColor', fill = 'none', sw = 2) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
+}
+function batteryIcon(level) {
+  if (nv(level)) return ic('batq', 28, '#A3AFBD');
+  const L = Math.max(0, Math.min(100, Number(level))), c = L < 20 ? '#FF6B6B' : '#3DDC97';
+  return `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Slave pili yüzde ${L}">${ICON.bat}<rect x="4" y="9" width="${(13 * L / 100).toFixed(1)}" height="6" rx="1" fill="${c}" stroke="none"/></svg>`;
+}
+
+/* ---------- Ayarlar (localStorage) ---------- */
+const MODES = [{ n: 'Kapalı', i: 'power', d: 'Isıtma durur' }, { n: 'Açık', i: 'hand', d: 'Elle ayarlanan hedef' }, { n: 'Program', i: 'cal', d: 'Saate göre profil' }, { n: 'Dışarıda', i: 'houseout', d: 'Düşük hedef' }];
+const fwProfile = x => { const n = Number(x); return (x === null || x === undefined || x === '' || !Number.isInteger(n) || n < 0 || n > 2) ? 0 : n + 1; };
+const PROFILES = [null, { n: 'Konfor', i: 'sun', c: '#FFB020' }, { n: 'Ekonomi', i: 'leaf', c: '#3DDC97' }, { n: 'Gece', i: 'moon', c: '#F2F5F8' }];
+const SENSORS = ['Sensör yok', 'DHT11', 'DHT22', 'AHT10', 'AHT20', 'SHT30'];
+const DEFAULT_KEYS = {
+  oda_sicaklik: 'oda_sicaklik', oda_nem: 'oda_nem', dis_sicaklik: 'dis_sicaklik', dis_nem: 'dis_nem',
+  kombi: 'kombi', mod: 'mod', profil: 'profil', hedef: 'hedef', manuel_hedef: 'manuel_hedef', slave_bagli: 'slave_bagli', slave_batarya: 'slave_batarya', pencere_acik: 'pencere_acik',
+  alarm_aktif: 'alarm_aktif', alarm: 'alarm', alarm_adi: 'alarm_adi',
+  model_hazir: 'hazir', model_ornek: 'ornek', model_isi_kapasitesi: 'isi_kapasitesi', model_isi_kaybi: 'isi_kaybi', model_dis_sicaklik: 'dis_sicaklik', model_fallback: 'fallback',
+  konfor: 'konfor', ekonomi: 'ekonomi', gece: 'gece', disari: 'disari', histerezis: 'histerezis',
+  konfor_saat: 'konfor_saat', ekonomi_saat: 'ekonomi_saat', gece_saat: 'gece_saat',
+  master_sensor_kodu: 'master_sensor_kodu', slave_sensor_kodu: 'slave_sensor_kodu',
+  master_sicaklik_offset: 'master_sicaklik_offset', master_nem_offset: 'master_nem_offset',
+  slave_sicaklik_offset: 'slave_sicaklik_offset', slave_nem_offset: 'slave_nem_offset', pencere_koruma: 'pencere_koruma', reset: 'reset'
+};
+const rid = () => Math.random().toString(16).slice(2, 8);
+function newBroker() {
+  return {
+    id: 'b' + Date.now().toString(36) + rid(), name: 'Adafruit IO', host: 'io.adafruit.com', ssl: true, port: 443, path: '/mqtt',
+    auth: true, user: '', key: '',
+    topics: { veri: 'termostat-veri', durum: 'termostat-durum', alarm: 'termostat-alarm', ayar: 'termostat-ayar', model: 'termostat-model', komut: 'termostat-komut' },
+    clientId: 'web_dashboard_' + rid(), cleanSession: true, keepAlive: 60, timeout: 30, autoConnect: true, showReconnect: true
+  };
+}
+const store = {
+  get(k, d) { try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* özel mod vb. */ } }
+};
+let cfg = store.get('termostat.cfg', null);
+if (!cfg || !Array.isArray(cfg.brokers) || !cfg.brokers.length) { const b = newBroker(); cfg = { brokers: [b], active: b.id }; }
+cfg.keys = Object.assign({}, DEFAULT_KEYS, cfg.keys || {});
+cfg.staleMin = cfg.staleMin || 10;
+const saveCfg = () => store.set('termostat.cfg', cfg);
+const activeBroker = () => cfg.brokers.find(b => b.id === cfg.active) || cfg.brokers[0];
+
+/* ---------- Durum ---------- */
+const S = Object.assign({ v: {}, lastVeri: null }, store.get('termostat.state', {}));
+S.conn = 'kapali'; S.connMsg = ''; S.demo = false; S.connectedAt = null; S.awaitGet = false; S.authError = false;
+const saveState = () => store.set('termostat.state', { v: S.demo ? (store.get('termostat.state', { v: {} }).v || {}) : S.v, lastVeri: S.lastVeri, model: S.model || null });
+
+function applyObj(o) {
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return false;
+  const K = cfg.keys; let any = false;
+  for (const [name, k] of Object.entries(K)) if (k && Object.prototype.hasOwnProperty.call(o, k)) { S.v[name] = o[k]; any = true; }
+  if (typeof o.aktif_profil === 'string' && !(K.profil in o)) { S.v.profil = { KONFOR: 0, EKONOMI: 1, GECE: 2 }[o.aktif_profil.toUpperCase()] ?? 3; any = true; }
+  if ('master_sensor_kod' in o && !(cfg.keys.master_sensor_kodu in o)) { S.v.master_sensor_kodu = o.master_sensor_kod; any = true; }
+  if ('slave_sensor_kod' in o && !(cfg.keys.slave_sensor_kodu in o)) { S.v.slave_sensor_kodu = o.slave_sensor_kod; any = true; }
+  return any;
+}
+function topicFor(kind, b = activeBroker()) {
+  const t = (b.topics[kind] ?? (kind === 'model' ? 'termostat-model' : '')).trim(); if (!t) return '';
+  if (t.includes('/')) return t;
+  return /adafruit/i.test(b.host) ? `${b.user}/feeds/${t}` : t;
+}
+const isAdafruit = (b = activeBroker()) => /adafruit/i.test(b.host);
+
+/* ---------- Günlük (Terminal) ---------- */
+const LOG = [];
+function log(kind, topic, text) {
+  const e = { t: new Date(), kind, topic, text: String(text ?? '') };
+  LOG.push(e); if (LOG.length > 300) LOG.shift();
+  if (view().name === 'terminal') termAppend(e);
+}
+const hms = d => d.toTimeString().slice(0, 8);
+
+/* ---------- Bağlantı (MQTT over WebSocket, Paho) ---------- */
+let client = null, reconnectTimer = null, backoff = 0, lastAttempt = 0, manualStop = false;
+function setConn(state, msg = '') { S.conn = state; S.connMsg = msg; if (state === 'bagli') S.connectedAt = Date.now(); redraw(); if (view().name === 'brokers') render(); }
+function disconnect() {
+  manualStop = true; clearTimeout(reconnectTimer);
+  if (client) { try { client.onConnectionLost = () => { }; client.disconnect(); } catch (e) { } client = null; }
+}
+function connect() {
+  clearTimeout(reconnectTimer);
+  const b = activeBroker();
+  if (client) { try { client.onConnectionLost = () => { }; client.disconnect(); } catch (e) { } client = null; }
+  manualStop = false; S.authError = false;
+  if (!b.host) return setConn('hata', 'Sunucu adı boş.');
+  if (b.auth && (!b.user || !b.key)) return setConn('hata', 'Kullanıcı adı ve anahtar gerekli.');
+  if (typeof Paho === 'undefined') return setConn('hata', 'MQTT kütüphanesi yüklenemedi.');
+  lastAttempt = Date.now(); setConn('baglaniyor');
+  const cid = (b.clientId || 'web_dashboard_' + rid());
+  try {
+    client = new Paho.Client(b.host, Number(b.port) || 443, b.path || '/mqtt', cid);
+  } catch (e) { return setConn('hata', 'Bağlantı kurulamadı: ' + e.message); }
+  client.onConnectionLost = r => {
+    log('sys', '', 'Bağlantı koptu' + (r && r.errorMessage ? ': ' + r.errorMessage : ''));
+    setConn('hata', 'Bağlantı koptu.'); scheduleReconnect();
+  };
+  client.onMessageArrived = m => onMessage(m.destinationName, m.payloadString);
+  const opt = {
+    useSSL: !!b.ssl, cleanSession: !!b.cleanSession, keepAliveInterval: Number(b.keepAlive) || 60, timeout: Number(b.timeout) || 30,
+    onSuccess: onConnected,
+    onFailure: e => {
+      const msg = (e && e.errorMessage) || 'bilinmeyen hata';
+      log('err', '', 'Bağlanamadı: ' + msg);
+      if (/return code:\s*[45]/i.test(msg)) { S.authError = true; return setConn('hata', 'Kimlik doğrulanamadı. Kullanıcı adı ve anahtarı kontrol et.'); }
+      setConn('hata', 'Bağlanamadı: ' + msg); scheduleReconnect();
+    }
+  };
+  if (b.auth) { opt.userName = b.user; opt.password = b.key; }
+  log('sys', '', `Bağlanılıyor: ${b.ssl ? 'wss' : 'ws'}://${b.host}:${b.port}${b.path || ''}`);
+  try { client.connect(opt); } catch (e) { setConn('hata', 'Bağlantı kurulamadı: ' + e.message); }
+}
+function scheduleReconnect() {
+  const b = activeBroker();
+  if (manualStop || S.authError || !b.autoConnect) return;
+  const wait = [5, 10, 20, 40, 60][Math.min(backoff++, 4)];
+  clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(connect, wait * 1000);
+  log('sys', '', `${wait} sn sonra yeniden denenecek`);
+}
+function onConnected() {
+  const b = activeBroker(); backoff = 0;
+  log('sys', '', 'Bağlandı');
+  setConn('bagli');
+  const kinds = ['veri', 'durum', 'alarm', 'ayar', 'model'];
+  /* Adafruit IO: geçersiz konuya abone olmak yasaklanmaya yol açar. Boş konular atlanır. */
+  kinds.forEach(k => { const t = topicFor(k); if (t) { try { client.subscribe(t, { qos: 0 }); log('sys', t, 'abone olundu'); } catch (e) { log('err', t, e.message); } } });
+  if (isAdafruit(b) && b.user) {
+    ['errors', 'throttle'].forEach(x => { try { client.subscribe(`${b.user}/${x}`, { qos: 0 }); } catch (e) { } });
+    S.awaitGet = true; setTimeout(() => { S.awaitGet = false; }, 4000);
+    /* /get her seferinde 1 veri noktası sayılır (dakikada 30 sınırı). Bağlanınca bir kez istenir. */
+    setTimeout(() => kinds.forEach(k => { const t = topicFor(k); if (t && client && client.isConnected()) { try { client.send(t + '/get', '0', 0, false); } catch (e) { } } }), 600);
+    fetchLastCreatedAt(); fetchModelCreatedAt();
+    setTimeout(() => syncNow(false), 2500);
+  }
+}
+function fetchModelCreatedAt() {
+  const b = activeBroker(), key = (b.topics.model ?? 'termostat-model').trim();
+  if (!key || key.includes('/') || !b.user || !b.key) return;
+  fetch(`https://io.adafruit.com/api/v2/${encodeURIComponent(b.user)}/feeds/${encodeURIComponent(key)}/data/last`, { headers: { 'X-AIO-Key': b.key } })
+    .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
+    .then(d => { if (d && d.created_at) { const ts = Date.parse(d.created_at); if (S.model) { S.model.t = ts; saveState(); redraw(); } else S.pendingModelT = ts; } })
+    .catch(() => { });
+}
+function fetchLastCreatedAt() {
+  const b = activeBroker(), key = (b.topics.veri || '').trim();
+  if (!key || key.includes('/') || !b.user || !b.key) return;
+  fetch(`https://io.adafruit.com/api/v2/${encodeURIComponent(b.user)}/feeds/${encodeURIComponent(key)}/data/last`, { headers: { 'X-AIO-Key': b.key } })
+    .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
+    .then(d => { if (d && d.created_at) { S.lastVeri = Date.parse(d.created_at); saveState(); log('sys', '', 'Son veri zamanı: ' + new Date(S.lastVeri).toLocaleString('tr-TR')); redraw(); } })
+    .catch(e => log('sys', '', 'Son veri zamanı alınamadı (' + e.message + '). Canlı mesajlar beklenecek.'));
+}
+function onMessage(topic, text) {
+  try { handleMessage(topic, text); } catch (e) { log('err', topic, 'Mesaj işlenemedi: ' + e.message); }
+}
+/* Öğrenme modülü: salt okunur, S.v'ye karışmaz (dis_sicaklik veri feed'indekini ezmesin) */
+function modelFrom(o) {
+  const K = cfg.keys, g = k => o[K['model_' + k] || k], n = x => (x === null || x === undefined || x === '' || !isFinite(Number(x))) ? null : Number(x);
+  return { hazir: n(g('hazir')), ornek: n(g('ornek')), isi_kapasitesi: n(g('isi_kapasitesi')), isi_kaybi: n(g('isi_kaybi')), dis_sicaklik: n(g('dis_sicaklik')), fallback: n(g('fallback')) };
+}
+const DEMO_MODEL = { hazir: 1, ornek: 12, isi_kapasitesi: 0.18, isi_kaybi: 0.04, dis_sicaklik: 17.0, fallback: 0, t: Date.now() - 7 * 60000 };
+const modelView = () => S.demo ? Object.assign({}, DEMO_MODEL, demoCur === 'slave' ? { fallback: 1 } : {}) : S.model;
+function handleMessage(topic, text) {
+  const b = activeBroker();
+  const kind = ['veri', 'durum', 'alarm', 'ayar', 'model'].find(k => topicFor(k) === topic);
+  const sys = /\/(errors|throttle)$/.test(topic);
+  log(sys ? 'err' : 'in', topic, text);
+  if (!kind) return;
+  let o; try { o = JSON.parse(text); if (typeof o === 'string') o = JSON.parse(o); } catch (e) { log('err', topic, 'JSON okunamadı'); return; }
+  if (kind === 'model') {
+    if (o && typeof o === 'object') { const m = modelFrom(o); m.t = S.awaitGet ? (S.pendingModelT || (S.model && S.model.t) || null) : Date.now(); S.model = m; saveState(); redraw(); }
+    return;
+  }
+  if (applyObj(o)) {
+    afterMerge();
+    if (kind === 'veri' && !S.awaitGet) S.lastVeri = Date.now();
+    if (!S.awaitGet) liveArchive(kind);
+    saveState(); redraw();
+  }
+}
+
+/* ---------- Komut kuyruğu (dakikada en fazla 24 mesaj, Adafruit sınırı 30) ---------- */
+const OUT = []; let outTimer = null;
+function publish(kind, payload) {
+  const t = topicFor(kind);
+  if (!t) { toast('Bu konu tanımlı değil: ' + kind); return false; }
+  if (S.demo) { log('out', t, payload + '  (demo, gönderilmedi)'); return true; }
+  if (!client || !client.isConnected()) { toast('Bağlı değil, komut gönderilmedi.'); return false; }
+  OUT.push({ t, payload }); pump(); return true;
+}
+const SENT = [];
+function pump() {
+  if (outTimer || !OUT.length) return;
+  const now = Date.now(); while (SENT.length && now - SENT[0] > 60000) SENT.shift();
+  if (SENT.length >= 24) { outTimer = setTimeout(() => { outTimer = null; pump(); }, 60000 - (now - SENT[0]) + 100); return; }
+  const m = OUT.shift(); SENT.push(now);
+  try { client.send(m.t, m.payload, 0, false); log('out', m.t, m.payload); } catch (e) { log('err', m.t, e.message); }
+  outTimer = setTimeout(() => { outTimer = null; pump(); }, 200);
+}
+function sendCmd(obj) {
+  const K = cfg.keys, o = {};
+  for (const [name, val] of Object.entries(obj)) o[name === 'manuel_hedef' ? (K.hedef || 'hedef') : (K[name] || name)] = val;
+  return publish('komut', JSON.stringify(o));
+}
+
+/* ---------- Demo ---------- */
+const DEMO = {
+  normal: { label: 'Normal', v: { oda_sicaklik: 22.2, oda_nem: 58.6, dis_sicaklik: 14.3, dis_nem: 62.1, kombi: 1, mod: 1, profil: 0, hedef: 24.0, manuel_hedef: 24.0, slave_bagli: 1, slave_batarya: 74, pencere_acik: 0, alarm_aktif: 0, alarm: 0 } },
+  program: { label: 'Program', v: { mod: 2, profil: 0, hedef: 22.5, kombi: 1, alarm_aktif: 0, alarm: 0, pencere_acik: 0 } },
+  disarida: { label: 'Dışarıda', v: { mod: 3, profil: 0, hedef: 16.0, kombi: 0, alarm_aktif: 0, alarm: 0, pencere_acik: 0 } },
+  kapali: { label: 'Kapalı', v: { mod: 0, profil: 0, hedef: null, kombi: 0, alarm_aktif: 0, alarm: 0, pencere_acik: 0 } },
+  slave: { label: 'Slave koptu', v: { slave_bagli: 0, slave_batarya: null, alarm_aktif: 1, alarm: 1, kombi: 0 } },
+  isitma: { label: 'Isıtma yok', v: { alarm_aktif: 1, alarm: 3, kombi: 0 } },
+  dissensor: { label: 'Dış sensör', v: { alarm_aktif: 1, alarm: 4, dis_sicaklik: null, dis_nem: null } },
+  pencere: { label: 'Pencere açık', v: { pencere_acik: 1, alarm_aktif: 0, alarm: 0 } },
+  veriyok: { label: 'Veri yok', v: {}, stale: true }
+};
+let demoTimer = null, demoCur = 'normal';
+function demoStart(name) {
+  S.demo = true; demoCur = name; S.demoStale = !!DEMO[name].stale;
+  S.v = Object.assign({}, DEMO.normal.v, name === 'normal' ? {} : DEMO[name].v);
+  Object.assign(S.v, { konfor: 22.5, ekonomi: 21, gece: 19, disari: 16, histerezis: 0.2, konfor_saat: '6:30', ekonomi_saat: '9:00', gece_saat: '23:00' });
+  S.lastVeri = S.demoStale ? Date.now() - (cfg.staleMin + 5) * 60000 : Date.now();
+  clearInterval(demoTimer);
+  demoTimer = setInterval(() => {
+    if (!S.demoStale) { S.lastVeri = Date.now(); if (!nv(S.v.oda_sicaklik) && !(S.v.alarm === 1 && S.v.alarm_aktif)) S.v.oda_sicaklik = Math.round((Number(S.v.oda_sicaklik) + (Math.random() - 0.5) * 0.2) * 10) / 10; }
+    redraw();
+  }, 3000);
+  redraw(); if (view().name === 'brokers') render();
+}
+function demoStop() { S.demo = false; clearInterval(demoTimer); S.v = store.get('termostat.state', { v: {} }).v || {}; S.lastVeri = store.get('termostat.state', {}).lastVeri || null; redraw(); if (view().name === 'brokers') render(); }
+
+const canConnect = b => !!b.host && (!b.auth || (!!b.user && !!b.key));
+
+/* ---------- Görünüm yönlendirme ---------- */
+function view() {
+  const h = (location.hash || '#home').slice(1).split('/');
+  return { name: h[0] || 'home', arg: h[1] || '' };
+}
+const go = n => { location.hash = '#' + n; };
+let ui = { menu: false, balloon: null, brokerMenu: null, sheet: null };
+let toastTimer = null;
+function toast(t) {
+  let el = $('.toast'); if (!el) { el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.textContent = t; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.remove(), 3500);
+}
+let redrawQueued = false;
+function redraw() { if (redrawQueued) return; redrawQueued = true; requestAnimationFrame(() => { redrawQueued = false; if (view().name === 'home') render(); }); }
+
+/* ---------- Alarm mantığı ---------- */
+function isStale() {
+  const lim = cfg.staleMin * 60000, now = Date.now();
+  if (S.lastVeri) return now - S.lastVeri > lim;
+  return S.conn === 'bagli' && S.connectedAt && now - S.connectedAt > lim;
+}
+function lastVals(kind) {
+  const v = S.v, t = (x, u) => nv(x) ? null : Number(x).toFixed(1) + u, h = x => nv(x) ? null : '%' + Math.round(x);
+  const room = [t(v.oda_sicaklik, '°'), h(v.oda_nem)].filter(Boolean).join(' · '), out = [t(v.dis_sicaklik, '°'), h(v.dis_nem)].filter(Boolean).join(' · ');
+  if (kind === 'room') return room ? `Son oda değeri: ${room}.` : '';
+  if (kind === 'outdoor') return out ? `Son dış değer: ${out}.` : '';
+  const a = [room && 'oda ' + room, out && 'dış ' + out].filter(Boolean).join(', '); return a ? `Son değerler: ${a}.` : '';
+}
+function alarmInfo() {
+  const v = S.v;
+  if (!S.demo && S.conn !== 'bagli') {
+    const msg = S.conn === 'baglaniyor' ? 'Broker’a bağlanılıyor.' : (S.connMsg || 'Broker bağlantısı yok. Bağlantı için Broker sayfasına bak.');
+    const old = !S.lastVeri || Date.now() - S.lastVeri > cfg.staleMin * 60000;
+    return { id: 'offline', color: 'gray', icon: 'cloudoff', title: 'Bağlantı yok', text: msg + (old ? ' ' + lastVals('all') : ''), blink: old ? 'all' : null };
+  }
+  if (isStale()) {
+    const m = S.lastVeri ? Math.round((Date.now() - S.lastVeri) / 60000) : null;
+    return { id: 'nodata', color: 'red', icon: 'cloudoff', title: 'Master’dan veri yok', text: (m ? `Son veri ${m} dakika önce geldi. Değerler güncel değil.` : 'Henüz veri gelmedi.') + ' ' + lastVals('all'), blink: 'all' };
+  }
+  const code = Number(v.alarm_aktif) === 1 ? (Number(v.alarm) || 0) : 0;
+  const A = {
+    1: { color: 'red', icon: 'wifioff', title: 'Slave bağlantısı koptu', text: 'Oda ünitesi yanıt vermiyor. Oda sıcaklığı ve nem güncel değil. ' + lastVals('room'), blink: 'room', reset: 1 },
+    2: { color: 'red', icon: 'thermooff', title: 'Oda sensörü hatalı', text: 'Oda sensörü bulunamadı veya veri hatalı. ' + lastVals('room'), blink: 'room', reset: 1 },
+    3: { color: 'red', icon: 'flameoff', title: 'Isıtma yok', text: 'Kombi yaklaşık 3 dakika açık kaldı ama sıcaklık yükselmedi.', blink: null, reset: 1 },
+    4: { color: 'yellow', icon: 'thermooff', title: 'Dış sensör hatalı', text: 'Dış sensör bulunamadı veya veri hatalı. Kombinin çalışmasını etkilemez. ' + lastVals('outdoor'), blink: 'outdoor', reset: 1 }
+  }[code];
+  if (A) return Object.assign({ id: 'alarm' + code }, A);
+  if (Number(v.pencere_acik) === 1) return { id: 'window', color: 'yellow', icon: 'window', title: 'Pencere açık', text: 'Pencere açık algılandı. Bu bir arıza değil, bilgi amaçlı.', blink: null };
+  return null;
+}
+function nextChange() {
+  const v = S.v, parse = s => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || '')); return m ? (+m[1]) * 60 + (+m[2]) : null; };
+  const L = [[parse(v.konfor_saat), 1], [parse(v.ekonomi_saat), 2], [parse(v.gece_saat), 3]].filter(x => x[0] !== null);
+  if (!L.length) return null;
+  const d = new Date(), now = d.getHours() * 60 + d.getMinutes();
+  L.sort((a, b) => a[0] - b[0]);
+  const n = L.find(x => x[0] > now) || L[0];
+  return { min: n[0], p: n[1] };
+}
+const hhmm = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+
+/* ---------- Ana ekran ---------- */
+function dialSVG(v, A) {
+  const flame = Number(v.kombi) === 1 && !(A && A.id === 'nodata'), lit = '#FF8A3D';
+  const idx = x => Math.max(0, Math.min(54, Math.round((Number(x) - 5) / 25 * 54)));
+  const deadRoom = !!(A && (A.blink === 'room' || A.blink === 'all')), deadAll = !!(A && A.blink === 'all');
+  const cur = nv(v.oda_sicaklik) || deadRoom ? -1 : idx(v.oda_sicaklik);
+  const mode = Number(v.mod), hasTgt = !nv(v.hedef) && mode !== 0 && !deadAll;
+  const tgt = hasTgt ? idx(v.hedef) : -1;
+  const room = '', tg = '';
+  let s = `<svg width="350" height="300" viewBox="0 0 350 300" role="img" aria-label="İç sıcaklık ${deadRoom ? 'bilinmiyor' : f1(v.oda_sicaklik) + ' derece'}, nem ${nv(v.oda_nem) || deadRoom ? 'bilinmiyor' : 'yüzde ' + Math.round(v.oda_nem)}, hedef ${hasTgt ? f1(v.hedef) + ' derece' : 'yok'}">`;
+  for (let i = 0; i < 55; i++) {
+    const a = (135 + 5 * i) * Math.PI / 180, big = i === tgt;
+    const r1 = big ? 118 : 128, r2 = big ? 160 : 152, col = big ? '#F2F5F8' : (i <= cur ? lit : '#2B3440');
+    s += `<line x1="${(175 + r1 * Math.cos(a)).toFixed(1)}" y1="${(175 + r1 * Math.sin(a)).toFixed(1)}" x2="${(175 + r2 * Math.cos(a)).toFixed(1)}" y2="${(175 + r2 * Math.sin(a)).toFixed(1)}" stroke="${col}" stroke-width="${big ? 5 : 3.5}" stroke-linecap="round"/>`;
+  }
+  s += `<g transform="translate(155 62) scale(1.67)"><path d="${FLAME}" fill="${flame ? '#FF8A3D' : 'none'}" fill-opacity="${flame ? .28 : 1}" stroke="${flame ? '#FF8A3D' : '#6B7785'}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></g>`;
+  const tx = nv(v.oda_sicaklik) || deadRoom ? '—' : Number(v.oda_sicaklik).toFixed(1);
+  s += `<g${room}><text x="175" y="200" text-anchor="middle" font-size="76" font-weight="600" fill="#F2F5F8">${tx}<tspan font-size="30" font-weight="500" fill="#A3AFBD" dy="-30">°C</tspan></text>`;
+  const hx = hasTgt ? [88, 114] : [140, 166];
+  s += `<svg x="${hx[0]}" y="214" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4DA3FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON.drop}</svg><text x="${hx[1]}" y="232" font-size="22" font-weight="500" fill="#F2F5F8">${nv(v.oda_nem) || deadRoom ? '—' : '%' + Math.round(v.oda_nem)}</text></g>`;
+  if (hasTgt) s += `<g${tg}><svg x="186" y="214" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF8A3D" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg><text x="212" y="232" font-size="22" font-weight="500" fill="#FF8A3D">${Number(v.hedef).toFixed(1)}°</text></g>`;
+  return s + '</svg>';
+}
+function balloonHTML(A) {
+  const v = S.v, b = ui.balloon; if (!b) return '';
+  if (b === 'alarm' && A) {
+    const act = A.reset ? `<button class="act" data-act="reset">Alarmı sıfırla</button>` : '';
+    return `<div class="balloon ${A.color} left" role="alertdialog" aria-label="${esc(A.title)}"><b>${esc(A.title)}</b><p>${esc(A.text)}</p>${act}</div>`;
+  }
+  if (b === 'mode') {
+    const m = MODES[Number(v.mod)] || { n: 'Bilinmiyor', d: 'Mod bilgisi gelmedi' };
+    let d = m.d; if (Number(v.mod) === 1 && !nv(v.hedef)) d = `Manuel hedef ${f1(v.hedef)}°`; if (Number(v.mod) === 3 && !nv(v.disari)) d = `Hedef ${f1(v.disari)}°`;
+    return `<div class="balloon info right m" role="status"><b>${m.n} modu</b><p>${esc(d)}</p></div>`;
+  }
+  if (b === 'profil') {
+    const pr = PROFILES[fwProfile(v.profil)]; if (!pr) return '';
+    const nc = nextChange(); let d = 'Saate göre otomatik değişir.';
+    if (nc && PROFILES[nc.p]) d = `${hhmm(nc.min)}’da ${PROFILES[nc.p].n}’e geçer`;
+    return `<div class="balloon info right p" role="status"><b>${pr.n} profili</b><p>${esc(d)}</p></div>`;
+  }
+  return '';
+}
+function drawerHTML() {
+  const items = [['home', 'home', 'Ana ekran'], ['kontrol', 'sliders', 'Kontrol'], ['program', 'cal', 'Program'], ['grafik', 'chart', 'Grafik'], ['sistem', 'gear', 'Sistem'], ['brokers', 'cloud', 'Broker']];
+  const cur = view().name;
+  return `<div class="scrim" data-act="close"></div><nav class="drawer" aria-label="Menü"><div class="ttl"><b>Salon</b><span>Akıllı termostat</span></div>` +
+    items.map(([n, i, l]) => `<button class="${cur === n || (n === 'brokers' && cur === 'brokeredit') || (n === 'sistem' && cur === 'kalibrasyon') ? 'on' : ''}" data-act="go:${n}">${ic(i, 26)}${l}</button>`).join('') +
+    `<hr><button data-act="go:terminal">${ic('terminal', 26)}Terminal</button></nav>`;
+}
+function homeHTML() {
+  const v = S.v, A = alarmInfo(), mode = Number(v.mod), md = MODES[mode] || MODES[1];
+  const pr = mode === 2 ? PROFILES[fwProfile(v.profil)] : null;
+  const stale = A && A.id === 'nodata';
+  const link = v.slave_bagli === undefined || v.slave_bagli === null || stale ? ic('wifioff', 28, '#A3AFBD') : (Number(v.slave_bagli) === 1 ? ic('wifi', 28, '#3DDC97') : ic('wifioff', 28, '#FF6B6B'));
+  const prof = pr ? `<button class="iconbtn" data-act="balloon:profil" aria-label="${pr.n} profili">${pr.n === 'Gece' ? ic('moon', 28, '#F2F5F8', '#F2F5F8', 1) : ic(pr.i, 28, pr.c)}</button>` : '<span class="slot"></span>';
+  const pill = A ? `<button class="pill ${A.color}" data-act="balloon:alarm" aria-label="${esc(A.title)}">${ic(A.icon, 22, 'currentColor')}</button>` : '';
+  const deadOut = !!(A && (A.blink === 'outdoor' || A.blink === 'all')), ob = '';
+  return `<div class="page">
+<div class="strip"><button class="iconbtn menu" data-act="menu" aria-label="Menü">${ic('menu', 26)}</button>${pill}
+<div class="strip-r"><button class="iconbtn" data-act="balloon:mode" aria-label="${md.n} modu">${ic(md.i, 28)}</button>${prof}<span class="ind">${link}</span><span class="ind">${stale ? ic('batq', 28, '#A3AFBD') : batteryIcon(v.slave_batarya)}</span></div></div>
+<div class="dial">${dialSVG(v, A)}</div>
+<div class="outdoor${ob}"><div class="g">${ic('suncloud', 38, '#A3AFBD')}</div><div class="g">${ic('thermo', 26, '#FFB020')}<span>${nv(v.dis_sicaklik) || deadOut ? '—' : Number(v.dis_sicaklik).toFixed(1) + '°'}</span></div><div class="g">${ic('drop', 26, '#4DA3FF')}<span>${nv(v.dis_nem) || deadOut ? '—' : '%' + Math.round(v.dis_nem)}</span></div></div>
+${ui.balloon ? '<div class="scrim" style="background:transparent;z-index:9" data-act="close"></div>' : ''}${balloonHTML(A)}${ui.menu ? drawerHTML() : ''}</div>`;
+}
+
+/* ---------- Henüz yapılmayan sayfalar ---------- */
+function stubHTML(title) {
+  return `<div class="page">${hdr(title)}<div class="card"><b>Bu sayfa bir sonraki adımda eklenecek.</b><span class="muted">Şimdilik bağlantıyı, ana ekranı, Broker ve Terminal sayfalarını deneyebilirsin.</span></div></div>`;
+}
+const hdr = (t, right = '') => `<div class="hdr"><button class="iconbtn back" data-act="back" aria-label="Geri">${ic('back', 28)}</button><h1>${t}</h1>${right}</div>`;
+
+/* ---------- Broker listesi ---------- */
+function brokersHTML() {
+  const st = { bagli: ['Bağlı', '#3DDC97'], baglaniyor: ['Bağlanıyor', '#FFB020'], hata: ['Bağlı değil', '#FF6B6B'], kapali: ['Bağlı değil', '#A3AFBD'] };
+  const cards = cfg.brokers.map(b => {
+    const act = b.id === cfg.active, s = act ? st[S.conn] || st.kapali : ['Pasif', '#A3AFBD'];
+    const open = ui.brokerMenu === b.id;
+    return `<div class="card" style="gap:6px"><div class="row" style="min-height:0"><div style="display:flex;align-items:baseline;gap:10px;min-width:0"><b style="font-size:18px">${esc(b.name)}</b><span style="font-size:14px;color:${s[1]}">${s[0]}</span></div><button class="iconbtn" style="margin:-8px -10px -8px 0" data-act="bmenu:${b.id}" aria-label="Broker menüsü">${ic('more', 24)}</button></div>
+<div style="display:flex;align-items:center;gap:8px;font-size:15px;color:var(--muted)"><span class="dot" style="background:${s[1]}"></span>${b.ssl ? 'wss' : 'ws'}://${esc(b.host)}:${esc(b.port)}</div>
+${act && S.connMsg && S.conn !== 'bagli' ? `<div style="font-size:13px;color:#FF6B6B">${esc(S.connMsg)}</div>` : ''}</div>
+${open ? `<div class="menu-pop" role="menu"><button data-act="bedit:${b.id}">${ic('edit', 22, '#A3AFBD')}Düzenle</button><button data-act="bconn:${b.id}">${ic('plug', 22, '#A3AFBD')}${act && S.conn === 'bagli' ? 'Bağlantıyı kes' : 'Bağlan'}</button>${cfg.brokers.length > 1 ? `<button data-act="bdel:${b.id}">${ic('trash', 22, '#FF6B6B')}<span style="color:#FF6B6B">Sil</span></button>` : ''}</div>` : ''}`;
+  }).join('');
+  const chips = Object.entries(DEMO).map(([k, d]) => `<button class="chip ${S.demo && demoCur === k ? 'on' : ''}" data-act="demo:${k}">${d.label}</button>`).join('');
+  return `<div class="page">${hdr('Brokerlar', `<button class="iconbtn" data-act="badd" aria-label="Broker ekle">${ic('plus', 28)}</button>`)}${cards}
+<div class="sub">Demo veri</div><div class="card"><div class="row"><span>Cihaz olmadan ekranları dene</span><button class="switch" role="switch" aria-checked="${S.demo}" aria-label="Demo veri" data-act="demotoggle"></button></div>${S.demo ? `<div class="chips">${chips}</div>` : ''}<span class="hint">Demo açıkken gerçek komut gönderilmez.</span></div></div>`;
+}
+
+/* ---------- Broker düzenle ---------- */
+function field(id, label, val, type = 'text', extra = '') { return `<div class="field"><label for="${id}">${label}</label><input id="${id}" type="${type}" value="${esc(val)}" ${extra}></div>`; }
+function toggleRow(id, label, on) { return `<div class="row"><span>${label}</span><button class="switch" id="${id}" role="switch" aria-checked="${!!on}" aria-label="${label}" data-act="tgl:${id}"></button></div>`; }
+function brokerEditHTML(id) {
+  const b = cfg.brokers.find(x => x.id === id); if (!b) return stubHTML('Broker bulunamadı');
+  return `<div class="page">${hdr('Broker düzenle')}
+<div class="card">${field('f-name', 'Ad', b.name)}</div>
+<div class="sub">Sunucu</div><div class="card">${field('f-host', 'Sunucu', b.host, 'text', 'autocapitalize="off" autocomplete="off" spellcheck="false"')}
+<div class="field"><label for="f-ssl">Protokol</label><select id="f-ssl"><option value="1" ${b.ssl ? 'selected' : ''}>Güvenli WebSocket (WSS)</option><option value="0" ${!b.ssl ? 'selected' : ''}>WebSocket (WS)</option></select></div>
+${field('f-port', 'Port', b.port, 'number')}<div class="hint">Tarayıcı ve APK içinden TCP kullanılamaz, WebSocket gerekir. Adafruit IO için 443.</div></div>
+<div class="sub">Kimlik doğrulama</div><div class="card">${toggleRow('f-auth', 'Kimlik doğrulama kullan', b.auth)}${field('f-user', 'Kullanıcı adı', b.user, 'text', 'autocapitalize="off" autocomplete="off" spellcheck="false"')}
+<div class="field"><label for="f-key">Parola / anahtar</label><div class="pw"><input id="f-key" type="password" value="${esc(b.key)}" autocomplete="off" spellcheck="false"><button data-act="eye" aria-label="Göster veya gizle">${ic('eye', 22, '#A3AFBD')}</button></div></div></div>
+<div class="sub">Konular</div><div class="card">${field('t-veri', 'Veri konusu (cihazdan gelen)', b.topics.veri)}${field('t-durum', 'Durum konusu (cihazdan gelen)', b.topics.durum)}${field('t-alarm', 'Alarm konusu (cihazdan gelen)', b.topics.alarm)}${field('t-ayar', 'Ayar konusu (cihazdan gelen)', b.topics.ayar)}${field('t-model', 'Model konusu (cihazdan gelen)', b.topics.model ?? 'termostat-model')}${field('t-komut', 'Komut konusu (cihaza giden)', b.topics.komut)}
+<div class="hint">Adafruit IO’da sadece feed adını yaz. Boş bırakılan konuya abone olunmaz. Var olmayan bir feed adı yazmak hesabın geçici engellenmesine yol açabilir.</div></div>
+<div class="sub">Gelişmiş</div><div class="card">${field('f-path', 'WebSocket yolu', b.path)}${field('f-cid', 'İstemci kimliği', b.clientId)}${toggleRow('f-clean', 'Temiz oturum', b.cleanSession)}
+${field('f-ka', 'Canlı tutma aralığı (sn)', b.keepAlive, 'number')}<div class="hint">5 ile 120 sn arası, varsayılan 60</div>${field('f-to', 'Bağlantı zaman aşımı (sn)', b.timeout, 'number')}<div class="hint">1 ile 300 sn arası, varsayılan 30</div>
+${toggleRow('f-auto', 'Otomatik bağlan', b.autoConnect)}${toggleRow('f-recon', 'Yeniden bağlanma durumunu göster', b.showReconnect)}</div>
+<button class="btn" data-act="bsave:${b.id}" style="margin-top:8px">Kaydet</button></div>`;
+}
+function saveBroker(id) {
+  const b = cfg.brokers.find(x => x.id === id); if (!b) return;
+  const g = i => $('#' + i).value.trim(), on = i => $('#' + i).getAttribute('aria-checked') === 'true';
+  const port = Number(g('f-port')); if (!g('f-host')) return toast('Sunucu adı boş olamaz.'); if (!(port > 0 && port < 65536)) return toast('Port 1 ile 65535 arasında olmalı.');
+  const ka = Math.max(5, Math.min(120, Number(g('f-ka')) || 60)), to = Math.max(1, Math.min(300, Number(g('f-to')) || 30));
+  Object.assign(b, { name: g('f-name') || 'Broker', host: g('f-host'), ssl: g('f-ssl') === '1', port, auth: on('f-auth'), user: g('f-user'), key: $('#f-key').value, path: g('f-path') || '/mqtt', clientId: g('f-cid'), cleanSession: on('f-clean'), keepAlive: ka, timeout: to, autoConnect: on('f-auto'), showReconnect: on('f-recon') });
+  b.topics = { veri: g('t-veri'), durum: g('t-durum'), alarm: g('t-alarm'), ayar: g('t-ayar'), model: g('t-model'), komut: g('t-komut') };
+  saveCfg(); toast('Kaydedildi.');
+  if (b.id === cfg.active && b.autoConnect && !S.demo) { backoff = 0; connect(); }
+  go('brokers');
+}
+
+/* ---------- Terminal ---------- */
+function termHTML() {
+  const topics = ['komut', 'veri', 'durum', 'alarm', 'ayar', 'model'].map(k => `<option value="${k}">${k} · ${esc(activeBroker().topics[k] || (k === 'model' ? 'termostat-model' : 'tanımsız'))}</option>`).join('');
+  return `<div class="page">${hdr('Terminal', `<button class="iconbtn" data-act="tclear" aria-label="Günlüğü temizle">${ic('trash', 24)}</button>`)}
+<div class="row" style="min-height:0"><span class="muted" id="t-stat"></span></div>
+<div class="log" id="t-log" role="log" aria-live="off"></div>
+<div class="sub">Mesaj gönder</div><div class="card"><div class="field"><label for="t-to">Konu</label><select id="t-to">${topics}</select></div>
+<div class="field"><label for="t-msg">JSON</label><textarea id="t-msg" spellcheck="false" placeholder='{"hedef":23.5}'></textarea></div>
+<button class="btn ghost" data-act="tsend" style="align-self:flex-end">Gönder</button><span class="hint">Mesajlar dakikada en fazla 24 olacak şekilde sıraya alınır (Adafruit IO sınırı 30).</span></div>
+<div class="sub">Alan eşlemesi</div><div class="card"><div class="field"><label for="t-keys">Panelin iç adı → cihazın JSON anahtarı</label><textarea id="t-keys" spellcheck="false" style="min-height:220px">${esc(JSON.stringify(cfg.keys, null, 1))}</textarea></div>
+<div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="keysreset">Varsayılana dön</button><button class="btn ghost" data-act="keyssave">Kaydet</button></div>
+<span class="hint">Firmware’deki bir anahtarın adı değişirse sağ tarafı düzelt. Sol taraf panelin kullandığı sabit isimdir.</span></div></div>`;
+}
+function termAppend(e) {
+  const box = $('#t-log'); if (!box) return;
+  const d = document.createElement('div'); d.className = e.kind;
+  d.innerHTML = `<time>${hms(e.t)}</time>${e.topic ? esc(e.topic) + ' ' : ''}${esc(e.text)}`;
+  box.appendChild(d); box.scrollTop = box.scrollHeight;
+  while (box.children.length > 300) box.firstChild.remove();
+}
+function termFill() {
+  const box = $('#t-log'); if (!box) return; box.innerHTML = '';
+  LOG.forEach(termAppend);
+  const el = $('#t-stat'); if (el) el.textContent = S.demo ? 'Demo veri açık' : ({ bagli: 'Bağlı', baglaniyor: 'Bağlanıyor…', hata: 'Bağlı değil: ' + S.connMsg, kapali: 'Bağlı değil' }[S.conn]);
+}
+
+/* ---------- Komut yardımcıları (bekleyen değer + gecikmeli gönderim) ---------- */
+const PEND = {}, PTIMER = {};
+const val = n => { const p = PEND[n]; if (p && Date.now() - p.t < 12000) return p.v; if (p) delete PEND[n]; return S.v[n]; };
+function setVal(n, v, delay = 1000) {
+  if (S.demo) { S.v[n] = v; delete PEND[n]; sendCmd({ [n]: v }); render(); return; }
+  PEND[n] = { v, t: Date.now() };
+  clearTimeout(PTIMER[n]);
+  const fire = () => { if (!sendCmd({ [n]: v })) { delete PEND[n]; render(); } };
+  delay ? PTIMER[n] = setTimeout(fire, delay) : fire();
+  render();
+}
+function stepVal(n, d, lo, hi, dec) {
+  const cur = Number(val(n)); if (nv(val(n))) return toast('Değer cihazdan henüz gelmedi.');
+  const k = Math.pow(10, dec), nx = Math.max(lo, Math.min(hi, Math.round((cur + d) * k) / k));
+  if (nx !== cur) setVal(n, nx);
+}
+function afterMerge() { for (const n of Object.keys(PEND)) { const a = S.v[n], b = PEND[n].v; if (a === b || (!nv(a) && !nv(b) && Math.abs(Number(a) - Number(b)) < 0.05)) delete PEND[n]; } }
+const sgn = (x, dec, unit) => nv(x) ? '—' : (Number(x) > 0 ? '+' : (Number(x) < 0 ? '−' : '')) + Math.abs(Number(x)).toFixed(dec) + unit;
+
+/* ---------- Kontrol ---------- */
+function stepBtn(label, name, d, lo, hi, dec, kind, size, disabled) {
+  return `<button class="stp ${size || ''}" aria-label="${label}" data-act="step:${name}:${d}:${lo}:${hi}:${dec}" ${disabled ? 'disabled' : ''}>${ic(kind, size ? 22 : 30)}</button>`;
+}
+function kontrolHTML() {
+  const A = alarmInfo(), dead = !!(A && A.blink === 'all');
+  const m = nv(val('mod')) ? -1 : Number(val('mod')), passive = m !== 1;
+  const mt = nv(val('manuel_hedef')) && m === 1 ? 'hedef' : 'manuel_hedef';
+  const h = Number(val(mt)), unknown = nv(val(mt)) || dead;
+  const tile = i => `<button class="tile ${m === i ? 'on' : ''}" aria-pressed="${m === i}" data-act="mode:${i}">${ic(MODES[i].i, 32)}<div><b>${MODES[i].n}</b><span>${i === 3 && !nv(val('disari')) ? 'Düşük hedef, ' + f1(val('disari')) + '°' : MODES[i].d}</span></div></button>`;
+  const frac = unknown ? 0 : Math.max(0, Math.min(1, (h - 5) / 25));
+  const track = `<svg width="100%" height="22" viewBox="0 0 318 22" preserveAspectRatio="none" role="img" aria-label="Hedef 5 ile 30 derece aralığında ${f1(h)} derece"><rect x="0" y="7" width="318" height="8" rx="4" fill="#2B3440"/><rect x="0" y="7" width="${(318 * frac).toFixed(1)}" height="8" rx="4" fill="#FF8A3D"/></svg>`;
+  return `<div class="page">${hdr('Kontrol')}
+<div class="tiles">${[0, 1, 2, 3].map(tile).join('')}</div>
+<div class="card" style="padding:16px;gap:14px"><div class="row" style="min-height:0"><div style="display:flex;align-items:center;gap:10px">${ic('hedefi', 24, passive ? '#A3AFBD' : '#FF8A3D')}<span style="font-size:17px;font-weight:500">Manuel hedef</span></div>
+<div style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:16px;font-weight:500"><svg width="20" height="20" viewBox="0 0 24 24" fill="${Number(S.v.kombi) === 1 && !dead ? '#FF8A3D' : 'none'}" fill-opacity=".3" stroke="${Number(S.v.kombi) === 1 && !dead ? '#FF8A3D' : '#6B7785'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${FLAME}"/></svg>${ic('thermo', 20, '#FFB020')}${dead || (A && A.blink === 'room') ? '—' : f1(S.v.oda_sicaklik) + '°'}</div></div>
+${dead ? `<div class="note" role="status">${ic('info', 20, '#A3AFBD')}<span>Master’dan veri yok, değerler bilinmiyor</span></div>` : ''}
+${passive ? `<div class="note" role="status">${ic('info', 20, '#A3AFBD')}<span>Manuel hedef sadece Açık modunda geçerli</span></div>` : ''}
+<div style="${passive ? 'opacity:.35;pointer-events:none;' : ''}display:flex;flex-direction:column;gap:14px">
+<div class="row" style="min-height:0">${stepBtn('Hedefi 0.1 derece düşür', mt, -0.1, 5, 30, 1, 'minus', '', passive || unknown)}<span class="val" style="font-size:60px;line-height:64px">${unknown ? '—' : h.toFixed(1)}<span style="font-size:28px;font-weight:500;color:var(--muted)">°C</span></span>${stepBtn('Hedefi 0.1 derece yükselt', mt, 0.1, 5, 30, 1, 'plus', '', passive || unknown)}</div>
+${track}<div class="row" style="min-height:0;margin-top:-8px;font-size:12px;color:var(--muted)"><span>5°</span><span>30°</span></div></div></div></div>`;
+}
+ICON.hedefi = '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/>';
+
+/* ---------- Program ---------- */
+const parseClock = s => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || '')); return m ? (+m[1]) * 60 + (+m[2]) : null; };
+function profCard(p, name, tKey, sKey) {
+  const t = val(sKey), tv = parseClock(t), unknown = nv(val(tKey)) || tv === null, pr = PROFILES[p];
+  const icon = p === 3 ? ic('moon', 24, '#F2F5F8', '#F2F5F8', 1) : ic(pr.i, 24, pr.c);
+  return `<div class="card" style="padding:12px 14px;gap:4px"><div class="row" style="min-height:44px"><div style="display:flex;align-items:center;gap:10px">${icon}<span style="font-size:17px;font-weight:500">${name}</span></div>
+<button class="timebtn" aria-label="${name} başlangıç saati" data-act="timeopen:${sKey}:${name}" ${tv === null ? 'disabled' : ''}>${ic('clock', 18, '#A3AFBD')}${tv === null ? '—' : hhmm(tv)}</button></div>
+<div class="row" style="min-height:0">${stepBtn(name + ' sıcaklığını düşür', tKey, -0.1, 5, 30, 1, 'minus', '', unknown)}<span class="val" style="font-size:30px">${nv(val(tKey)) ? '—' : Number(val(tKey)).toFixed(1)}°</span>${stepBtn(name + ' sıcaklığını yükselt', tKey, 0.1, 5, 30, 1, 'plus', '', unknown)}</div></div>`;
+}
+ICON.clock = '<circle cx="12" cy="12" r="9"/>' + p('M12 7v5l3 2');
+function timeline() {
+  const L = [[parseClock(val('konfor_saat')), 1], [parseClock(val('ekonomi_saat')), 2], [parseClock(val('gece_saat')), 3]].filter(x => x[0] !== null).sort((a, b) => a[0] - b[0]);
+  const W = 350, X = m => W * m / 1440, col = { 1: '#FFB020', 2: '#3DDC97', 3: '#5B6678' };
+  let segs = [];
+  L.forEach((s, i) => { const a = s[0], b = i + 1 < L.length ? L[i + 1][0] : L[0][0] + 1440; if (b <= 1440) segs.push([a, b, s[1]]); else { segs.push([a, 1440, s[1]]); if (L[0][0] > 0) segs.push([0, b - 1440, s[1]]); } });
+  let s = `<svg width="100%" viewBox="0 0 ${W} 56" role="img" aria-label="24 saatlik program"><defs><clipPath id="bar"><rect x="0" y="6" width="${W}" height="30" rx="10"/></clipPath></defs><g clip-path="url(#bar)">`;
+  segs.forEach(([a, b, p]) => { s += `<rect x="${X(a).toFixed(1)}" y="6" width="${(X(b) - X(a)).toFixed(1)}" height="30" fill="${col[p]}"/><line x1="${X(a).toFixed(1)}" y1="6" x2="${X(a).toFixed(1)}" y2="36" stroke="#0F1419" stroke-width="2"/>`; });
+  s += '</g>';
+  segs.forEach(([a, b, p]) => { if (X(b) - X(a) > 30) { const cx = (X(a) + X(b)) / 2 - 9; s += `<svg x="${cx.toFixed(1)}" y="12" width="18" height="18" viewBox="0 0 24 24" fill="${p === 3 ? '#F2F5F8' : 'none'}" stroke="${p === 3 ? '#F2F5F8' : '#0F1419'}" stroke-width="${p === 3 ? 1 : 2}" stroke-linecap="round" stroke-linejoin="round">${ICON[PROFILES[p].i]}</svg>`; } });
+  const d = new Date(), now = X(d.getHours() * 60 + d.getMinutes());
+  s += `<line x1="${now.toFixed(1)}" y1="2" x2="${now.toFixed(1)}" y2="40" stroke="#F2F5F8" stroke-width="3" stroke-linecap="round"/>`;
+  [['00', 0, 'start'], ['06', 87.5, 'middle'], ['12', 175, 'middle'], ['18', 262.5, 'middle'], ['24', 350, 'end']].forEach(([l, x, a]) => s += `<text x="${x}" y="54" text-anchor="${a}" font-size="11" fill="#A3AFBD">${l}</text>`);
+  return s + '</svg>';
+}
+function programHTML() {
+  const compact = (icon, color, name, key, lo, hi, dec, fmt) => `<div class="card" style="padding:12px 14px"><div class="row" style="min-height:0"><div style="display:flex;align-items:center;gap:10px">${ic(icon, 24, color)}<span style="font-size:17px;font-weight:500">${name}</span></div><div style="display:flex;align-items:center;gap:6px">${stepBtn(name + ' değerini düşür', key, -0.1, lo, hi, dec, 'minus', 's', nv(val(key)))}<span class="val" style="font-size:24px;min-width:68px">${nv(val(key)) ? '—' : fmt(Number(val(key)))}</span>${stepBtn(name + ' değerini yükselt', key, 0.1, lo, hi, dec, 'plus', 's', nv(val(key)))}</div></div></div>`;
+  const noData = ['konfor', 'ekonomi', 'gece'].every(k => nv(val(k)));
+  return `<div class="page">${hdr('Program')}${timeline()}
+${Number(S.v.mod) !== 2 ? `<div class="note" role="status">${ic('info', 20, '#A3AFBD')}<span>Profiller sadece Program modunda devrede</span></div>` : ''}
+${noData ? `<div class="note" role="status">${ic('info', 20, '#FFB020')}<span>Ayarlar cihazdan henüz gelmedi. Değerler gelince düzenlenebilir.</span></div>` : ''}
+${profCard(1, 'Konfor', 'konfor', 'konfor_saat')}${profCard(2, 'Ekonomi', 'ekonomi', 'ekonomi_saat')}${profCard(3, 'Gece', 'gece', 'gece_saat')}
+${compact('houseout', '#A3AFBD', 'Dışarıda', 'disari', 5, 30, 1, x => x.toFixed(1) + '°')}${compact('plusminus', '#A3AFBD', 'Histerezis', 'histerezis', 0.1, 5, 1, x => '±' + x.toFixed(1) + '°')}${ui.sheet === 'time' && ui.tp ? timeSheet() : ''}</div>`;
+}
+function timeSheet() {
+  const { name, h, m } = ui.tp, opt = (n, cur) => Array.from({ length: n }, (_, i) => `<option value="${i}" ${i === cur ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`).join('');
+  return `<div class="scrim" data-act="sheetclose"></div><div class="sheet" role="dialog" aria-label="${esc(name)} başlangıç saati"><div class="grab"></div><div style="font-size:18px;font-weight:600;margin-bottom:10px">${esc(name)} başlangıç saati</div>
+<div style="display:flex;align-items:center;gap:10px" class="field"><select id="tp-h" aria-label="Saat">${opt(24, h)}</select><span style="font-size:26px;font-weight:600">:</span><select id="tp-m" aria-label="Dakika">${opt(60, m)}</select></div>
+<div style="display:flex;gap:10px;margin-top:14px"><button class="btn ghost" style="flex:1;height:56px;border-radius:28px" data-act="sheetclose">İptal</button><button class="btn" style="flex:1" data-act="timesave">Kaydet</button></div></div>`;
+}
+ICON.plusminus = p('M12 4v6M9 7h6M9 17h6');
+
+/* ---------- Sistem ve Kalibrasyon ---------- */
+function sistemHTML() {
+  const v = S.v, A = alarmInfo(), act = A && A.reset, deadAll = !!(A && A.blink === 'all');
+  const sname = k => { const c = val(k); return nv(c) ? '—' : (SENSORS[Number(c)] || 'Kod ' + c); };
+  const row = (i, c, l, r, rc) => `<div class="row" style="min-height:48px"><div style="display:flex;align-items:center;gap:12px">${ic(i, 24, c)}<span style="font-size:16px">${l}</span></div><span style="font-size:16px;font-weight:600;color:${rc || 'var(--text)'}">${r}</span></div>`;
+  const sens = (which, label, icon, key, tk, nk) => `<div class="row" style="min-height:56px"><div style="display:flex;align-items:center;gap:12px">${ic(icon, 24, '#A3AFBD')}<span style="font-size:16px">${label}</span></div><button class="pillsel" aria-haspopup="listbox" data-act="sheet:${which}" aria-label="${label}: ${sname(key)}">${sname(key)}${ic('down', 20, '#A3AFBD')}</button></div>
+<button class="calrow" data-act="go:kalibrasyon" aria-label="${label} kalibrasyonu"><span style="font-size:15px;color:var(--muted);padding-left:36px">Kalibrasyon</span><span style="display:flex;align-items:center;gap:6px;font-size:15px;font-weight:500">${sgn(val(tk), 1, '°')} · ${sgn(val(nk), 0, '%')}${ic('right', 20, '#A3AFBD')}</span></button>`;
+  const link = nv(v.slave_bagli) || deadAll ? [deadAll ? 'Bilinmiyor' : '—', '#A3AFBD', 'wifioff'] : (Number(v.slave_bagli) === 1 ? ['Bağlı', '#3DDC97', 'wifi'] : ['Koptu', '#FF6B6B', 'wifioff']);
+  const pw = val('pencere_koruma'), pwOn = Number(pw) === 1;
+  const sheet = ui.sheet ? sheetHTML() : '';
+  return `<div class="page">${hdr('Sistem')}<div class="sub">Durum</div><div class="card" style="padding:8px 16px">
+${row(link[2], link[1], 'Slave bağlantısı', link[0], link[1])}${row('batq', '#A3AFBD', 'Slave pili', deadAll ? '—' : nv(v.slave_batarya) ? 'Veri yok' : '%' + Math.round(v.slave_batarya), deadAll || nv(v.slave_batarya) ? '#A3AFBD' : undefined)}
+<div class="row" style="min-height:48px"><div style="display:flex;align-items:center;gap:12px">${ic(A ? A.icon : 'bell', 24, A ? (A.color === 'red' ? '#FF6B6B' : A.color === 'yellow' ? '#FFB020' : '#A3AFBD') : '#3DDC97')}<span style="font-size:16px">${A ? esc(A.title) : 'Alarm yok'}</span></div><button class="btn ghost" style="height:36px;padding:0 16px;border-radius:10px;border-width:1.5px;${act ? '' : 'opacity:.4'}" data-act="reset" ${act ? '' : 'disabled'} aria-label="Alarmı sıfırla">Sıfırla</button></div></div>
+<div class="sub">Sensörler</div><div class="card" style="padding:8px 16px">${sens('master', 'Dış sensör · master', 'suncloud', 'master_sensor_kodu', 'master_sicaklik_offset', 'master_nem_offset')}<div class="divider"></div>${sens('slave', 'Oda sensörü · slave', 'home', 'slave_sensor_kodu', 'slave_sicaklik_offset', 'slave_nem_offset')}</div>
+<div class="card" style="flex-direction:row;align-items:center;justify-content:space-between;height:64px;padding:0 16px"><div style="display:flex;align-items:center;gap:12px">${ic('window', 24)}<span style="font-size:16px">Pencere koruması</span></div><button class="switch" role="switch" aria-checked="${pwOn}" aria-label="Pencere koruması" data-act="pwtoggle"></button></div>
+${nv(pw) ? '<span class="hint">Ayar cihazdan henüz gelmedi.</span>' : ''}${modelCard()}${sheet}</div>`;
+}
+function modelCard() {
+  const m = modelView() || {}, has = k => m[k] !== null && m[k] !== undefined;
+  const coef = k => (has(k) && m[k] > 0) ? Number(m[k].toFixed(3)).toString() : '—';
+  const row = (l, v, col) => `<div class="row" style="min-height:44px"><span style="font-size:16px">${l}</span><span style="font-size:16px;font-weight:600;text-align:right;${col ? 'color:' + col : ''}">${v}</span></div>`;
+  const dur = !has('hazir') ? ['—'] : m.hazir ? ['Hazır', 'var(--green)'] : ['Öğreniyor', 'var(--amber)'];
+  const ctl = !has('fallback') ? ['—'] : m.fallback ? ['Yedek: tahmini sıcaklıkla', 'var(--amber)'] : ['Normal, Slave verisiyle', 'var(--green)'];
+  let when = 'Veri henüz gelmedi';
+  if (m.t) { const dt = new Date(m.t), same = dt.toDateString() === new Date().toDateString(); when = 'Son güncelleme: ' + (same ? dt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : dt.toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })); }
+  else if (has('hazir')) when = 'Son güncelleme zamanı bilinmiyor';
+  return `<div class="sub">Öğrenme modülü</div><div class="card" style="padding:8px 16px">${row('Durum', dur[0], dur[1])}${row('Örnek sayısı', has('ornek') ? m.ornek : '—')}${row('Isıtma hızı', coef('isi_kapasitesi') + (coef('isi_kapasitesi') === '—' ? '' : ' °C/dk'))}${row('Isı kaybı', coef('isi_kaybi') + (coef('isi_kaybi') === '—' ? '' : ' °C/dk/°C'))}${row('Dış sıcaklık', has('dis_sicaklik') ? Number(m.dis_sicaklik).toFixed(1) + '°' : '—')}${row('Kontrol', ctl[0], ctl[1])}</div><span class="hint">Salt okunur · ${when}</span>`;
+}
+function sheetHTML() {
+  const which = ui.sheet, key = which === 'master' ? 'master_sensor_kodu' : 'slave_sensor_kodu', cur = Number(val(key));
+  return `<div class="scrim" data-act="sheetclose"></div><div class="sheet" role="listbox" aria-label="${which === 'master' ? 'Dış sensör · master' : 'Oda sensörü · slave'}"><div class="grab"></div><div style="font-size:18px;font-weight:600;margin-bottom:6px">${which === 'master' ? 'Dış sensör · master' : 'Oda sensörü · slave'}</div>` +
+    SENSORS.map((n, i) => `<button class="opt ${cur === i ? 'on' : ''}" role="option" aria-selected="${cur === i}" data-act="pick:${key}:${i}">${n}${cur === i ? ic('check', 24, '#FF8A3D') : ''}</button>`).join('') + '</div>';
+}
+function kalibHTML() {
+  const card = (name, icon, model, tn, hn, tk, hk) => `<div class="card" style="padding:8px 16px 4px"><div class="row" style="min-height:48px"><div style="display:flex;align-items:center;gap:12px">${ic(icon, 24, '#A3AFBD')}<span style="font-size:17px;font-weight:600">${name}</span></div><span style="font-size:14px;color:var(--muted);border:1.5px solid var(--line2);border-radius:14px;padding:3px 10px">${model}</span></div><div class="divider"></div>
+${stp('Sıcaklık', 'thermo', '#FFB020', f1(tn) + '°', tk, 0.1, -5, 5, 1)}<div class="divider"></div>${stp('Nem', 'drop', '#4DA3FF', nv(hn) ? '—' : '%' + Math.round(hn), hk, 1, -20, 20, 0)}</div>`;
+  const stp = (l, i, c, now, key, d, lo, hi, dec) => `<div class="row" style="min-height:68px"><div style="display:flex;align-items:center;gap:12px">${ic(i, 24, c)}<div><div style="font-size:16px">${l}</div><div style="font-size:13px;color:var(--muted)">Şu an ${now}</div></div></div><div style="display:flex;align-items:center;gap:6px">${stepBtn(l + ' düzeltmesini azalt', key, -d, lo, hi, dec, 'minus', 's', nv(val(key)))}<span class="val" style="font-size:20px;min-width:68px">${sgn(val(key), dec, dec ? '°' : '%')}</span>${stepBtn(l + ' düzeltmesini artır', key, d, lo, hi, dec, 'plus', 's', nv(val(key)))}</div></div>`;
+  const ms = SENSORS[Number(val('master_sensor_kodu'))] || '—', ss = SENSORS[Number(val('slave_sensor_kodu'))] || '—';
+  return `<div class="page">${hdr('Kalibrasyon')}${card('Dış sensör · master', 'suncloud', ms, S.v.dis_sicaklik, S.v.dis_nem, 'master_sicaklik_offset', 'master_nem_offset')}${card('Oda sensörü · slave', 'home', ss, S.v.oda_sicaklik, S.v.oda_nem, 'slave_sicaklik_offset', 'slave_nem_offset')}
+<div class="hint" style="font-size:13px;line-height:18px;margin:0 4px">Referans bir termometre ve nem ölçerle karşılaştır, farkı buraya gir. Düzeltme cihazda uygulanır, yeni değer bir sonraki ölçümde (en fazla 3 dakika) görünür.</div></div>`;
+}
+
+/* ===================== Arşiv (IndexedDB), senkron, hesaplar ===================== */
+const ARCH = { veri: [], durum: [], alarm: [] };
+const KINDS = ['veri', 'durum', 'alarm'];
+let idb = null, archReady = false;
+S.sync = { running: false, pct: 0, msg: '', err: '', last: store.get('termostat.lastSync', null) };
+function idbOpen() {
+  return new Promise(res => {
+    if (typeof indexedDB === 'undefined') return res(null);
+    const rq = indexedDB.open('termostat', 1);
+    rq.onupgradeneeded = () => { const d = rq.result; KINDS.forEach(k => d.createObjectStore(k, { keyPath: 't' })); };
+    rq.onsuccess = () => res(rq.result); rq.onerror = () => res(null);
+  });
+}
+function idbAll(kind) { return new Promise(res => { if (!idb) return res([]); const rq = idb.transaction(kind).objectStore(kind).getAll(); rq.onsuccess = () => res(rq.result || []); rq.onerror = () => res([]); }); }
+function idbPut(kind, recs) { return new Promise(res => { if (!idb || !recs.length) return res(); const tx = idb.transaction(kind, 'readwrite'), st = tx.objectStore(kind); recs.forEach(r => st.put(r)); tx.oncomplete = tx.onerror = () => res(); }); }
+function idbDel(kind, keys) { return new Promise(res => { if (!idb || !keys.length) return res(); const tx = idb.transaction(kind, 'readwrite'), st = tx.objectStore(kind); keys.forEach(k => st.delete(k)); tx.oncomplete = tx.onerror = () => res(); }); }
+async function archInit() {
+  idb = await idbOpen();
+  for (const k of KINDS) mergeInto(k, await idbAll(k));
+  archReady = true; if (view().name === 'grafik') render();
+}
+function mergeInto(kind, recs) {
+  const a = ARCH[kind]; ARCH[kind] = a.concat(recs).sort((x, y) => x.t - y.t);
+  const o = []; for (const r of ARCH[kind]) { if (o.length && o[o.length - 1].t === r.t) o[o.length - 1] = r; else o.push(r); } ARCH[kind] = o;
+}
+/* kayıt biçimleri: veri {t,os,on,ds,dn}  durum {t,k,m,p,h,sb,bat,pa}  alarm {t,aa,a} */
+function toRec(kind, o, t) {
+  const K = cfg.keys, g = n => (o[K[n]] === undefined ? null : o[K[n]]), num = x => (nv(x) ? null : Number(x));
+  if (kind === 'veri') return { t, os: num(g('oda_sicaklik')), on: num(g('oda_nem')), ds: num(g('dis_sicaklik')), dn: num(g('dis_nem')) };
+  if (kind === 'durum') return { t, k: num(g('kombi')), m: num(g('mod')), p: num(g('profil')), h: num(g('hedef')), sb: num(g('slave_bagli')), bat: num(g('slave_batarya')), pa: num(g('pencere_acik')) };
+  return { t, aa: num(g('alarm_aktif')), a: num(g('alarm')) };
+}
+function liveArchive(kind) {
+  if (!KINDS.includes(kind) || S.restOk === true || S.demo) return;
+  const o = {}; const K = cfg.keys; Object.keys(K).forEach(n => { if (S.v[n] !== undefined) o[K[n]] = S.v[n]; });
+  const r = toRec(kind, o, Date.now()); r.l = 1; mergeInto(kind, [r]); idbPut(kind, [r]);
+}
+const iso = t => new Date(t).toISOString();
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function syncFeed(kind, b, span) {
+  const key = (b.topics[kind] || '').trim(); if (!key || key.includes('/')) return 0;
+  const a = ARCH[kind].filter(r => !r.l); let start = a.length ? a[a.length - 1].t + 1 : Date.now() - 31 * 864e5;
+  const first = start, last = Date.now(); let end = last, n = 0, guard = 0;
+  const base = `https://io.adafruit.com/api/v2/${encodeURIComponent(b.user)}/feeds/${encodeURIComponent(key)}/data`;
+  const got = [];
+  while (guard++ < 400) {
+    const r = await fetch(`${base}?start_time=${encodeURIComponent(iso(start))}&end_time=${encodeURIComponent(iso(end))}&limit=1000`, { headers: { 'X-AIO-Key': b.key } });
+    if (r.status === 429) { S.sync.msg = 'Adafruit hız sınırı, bekleniyor…'; redrawGrafik(); await sleep(31000); continue; }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const page = await r.json(); if (!Array.isArray(page) || !page.length) break;
+    const ts = page.map(x => Date.parse(x.created_at)).filter(x => !Number.isNaN(x)); if (!ts.length) break;
+    const mn = Math.min(...ts), mx = Math.max(...ts);
+    page.forEach(x => { try { let o = JSON.parse(x.value); if (typeof o === 'string') o = JSON.parse(o); if (o && typeof o === 'object') got.push(toRec(kind, o, Date.parse(x.created_at))); } catch (e) { } });
+    n += page.length;
+    S.sync.pct = Math.min(99, Math.round(100 * (span === 'down' ? 0 : 0))); // yüzde aşağıda güncellenir
+    const asc = Date.parse(page[0].created_at) <= Date.parse(page[page.length - 1].created_at);
+    if (page.length < 1000) break;
+    if (asc) { start = mx + 1; S.sync.pct = Math.min(99, Math.round(100 * (start - first) / Math.max(1, last - first))); }
+    else { end = mn - 1; S.sync.pct = Math.min(99, Math.round(100 * (last - end) / Math.max(1, last - first))); }
+    redrawGrafik();
+  }
+  const lives = ARCH[kind].filter(r => r.l && r.t >= first); if (lives.length) { ARCH[kind] = ARCH[kind].filter(r => !(r.l && r.t >= first)); await idbDel(kind, lives.map(r => r.t)); }
+  mergeInto(kind, got); await idbPut(kind, got);
+  return got.length;
+}
+async function syncNow(manual) {
+  const b = activeBroker();
+  if (S.sync.running) return;
+  if (!isAdafruit(b) || !b.user || !b.key) { if (manual) toast('Senkron için Adafruit IO bilgileri gerekli.'); return; }
+  if (!archReady) await archInit();
+  S.sync.running = true; S.sync.err = ''; S.sync.pct = 0; S.sync.msg = 'Veri alınıyor'; redrawGrafik();
+  try {
+    let total = 0;
+    for (const k of KINDS) total += await syncFeed(k, b);
+    S.restOk = true; S.sync.last = Date.now(); store.set('termostat.lastSync', S.sync.last);
+    if (manual) toast(total ? `${total} kayıt eklendi.` : 'Arşiv güncel.');
+  } catch (e) {
+    S.restOk = false; S.sync.err = 'Adafruit’ten geçmiş alınamadı (' + e.message + '). Canlı veriler arşive yazılmaya devam eder.';
+    log('err', '', S.sync.err);
+  }
+  S.sync.running = false; S.sync.pct = 100; redrawGrafik();
+}
+let gTimer = null;
+function redrawGrafik() { if (view().name !== 'grafik' || gTimer) return; gTimer = setTimeout(() => { gTimer = null; if (view().name === 'grafik') render(); }, 400); }
+
+/* ---------- CSV ---------- */
+const CSV_COLS = ['zaman', 'tip', 'oda_sicaklik', 'oda_nem', 'dis_sicaklik', 'dis_nem', 'kombi', 'mod', 'profil', 'hedef', 'slave_bagli', 'slave_batarya', 'pencere_acik', 'alarm_aktif', 'alarm'];
+const CSV_MAP = { veri: { os: 'oda_sicaklik', on: 'oda_nem', ds: 'dis_sicaklik', dn: 'dis_nem' }, durum: { k: 'kombi', m: 'mod', p: 'profil', h: 'hedef', sb: 'slave_bagli', bat: 'slave_batarya', pa: 'pencere_acik' }, alarm: { aa: 'alarm_aktif', a: 'alarm' } };
+function csvExport() {
+  const rows = [CSV_COLS.join(',')];
+  KINDS.forEach(k => ARCH[k].forEach(r => { const o = { zaman: iso(r.t), tip: k }; for (const [s, c] of Object.entries(CSV_MAP[k])) o[c] = r[s] === null || r[s] === undefined ? '' : r[s]; rows.push(CSV_COLS.map(c => o[c] === undefined ? '' : o[c]).join(',')); }));
+  return rows.join('\n') + '\n';
+}
+function csvImport(text) {
+  const lines = text.split(/\r?\n/).filter(Boolean); if (lines.length < 2) return 0;
+  const head = lines[0].split(',').map(s => s.trim()); if (head[0] !== 'zaman' || head[1] !== 'tip') throw new Error('Başlık satırı tanınmadı');
+  const by = { veri: [], durum: [], alarm: [] };
+  for (const ln of lines.slice(1)) {
+    const c = ln.split(','), o = {}; head.forEach((h, i) => { o[h] = c[i]; });
+    const k = o.tip, t = Date.parse(o.zaman); if (!by[k] || Number.isNaN(t)) continue;
+    const r = { t }; for (const [s, col] of Object.entries(CSV_MAP[k])) r[s] = o[col] === '' || o[col] === undefined ? null : Number(o[col]);
+    by[k].push(r);
+  }
+  let n = 0; KINDS.forEach(k => { if (by[k].length) { mergeInto(k, by[k]); idbPut(k, by[k]); n += by[k].length; } });
+  return n;
+}
+function downloadCSV() {
+  if (!KINDS.some(k => ARCH[k].length)) return toast('Arşivde veri yok.');
+  const blob = new Blob([csvExport()], { type: 'text/csv;charset=utf-8' }), a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'termostat-arsiv-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  store.set('termostat.lastCsv', Date.now());
+}
+
+/* ---------- Hesaplar ---------- */
+const G = { range: '7 gün', off: 0, temp: true, hum: true };
+const RANGES = { '24 sa': 864e5, '7 gün': 7 * 864e5, '30 gün': 30 * 864e5, '1 yıl': 365 * 864e5 };
+const winOf = () => { const L = RANGES[G.range], end = Date.now() - G.off * L; return [end - L, end]; };
+const inWin = (a, t0, t1) => { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m].t < t0) lo = m + 1; else hi = m; } const o = []; for (let i = lo; i < a.length && a[i].t <= t1; i++) o.push(a[i]); return o; };
+const lastBefore = (a, t) => { let lo = 0, hi = a.length - 1, r = null; while (lo <= hi) { const m = (lo + hi) >> 1; if (a[m].t < t) { r = a[m]; lo = m + 1; } else hi = m - 1; } return r; };
+const stat = (arr, key) => { const v = arr.map(r => r[key]).filter(x => x !== null && x !== undefined); return v.length ? { avg: v.reduce((a, b) => a + b, 0) / v.length, max: Math.max(...v), min: Math.min(...v) } : null; };
+function runtimeMs(t0, t1) {
+  const d = ARCH.durum, pre = lastBefore(d, t0); let state = pre ? pre.k : null, prevT = t0, ms = 0;
+  for (const r of inWin(d, t0, t1)) { if (state === 1) ms += r.t - prevT; if (r.k !== null) state = r.k; prevT = r.t; }
+  if (state === 1) ms += t1 - prevT; return ms;
+}
+function saving(t0, t1) {
+  const d = ARCH.durum, ve = ARCH.veri; if (!d.length || !ve.length) return null;
+  const ref = Number(cfg.energy && cfg.energy.ref) || Number(S.v.konfor) || 22.5;
+  let E = 0, Er = 0, cnt = 0, di = 0, vi = 0, curH = null, curM = null;
+  const step = 15 * 60000, start = Math.max(t0, d[0].t);
+  for (let ts = start; ts <= t1; ts += step) {
+    while (di < d.length && d[di].t <= ts) { if (d[di].h !== null) curH = d[di].h; if (d[di].m !== null) curM = d[di].m; di++; }
+    while (vi + 1 < ve.length && ve[vi + 1].t <= ts) vi++;
+    const v = ve[vi]; if (!v || v.ds === null || Math.abs(v.t - ts) > 45 * 60000 || curH === null) continue;
+    const tg = curM === 0 ? v.ds : curH; E += Math.max(0, tg - v.ds); Er += Math.max(0, ref - v.ds); cnt++;
+  }
+  if (cnt < 96 || Er <= 0) return null;
+  return { pct: Math.max(0, Math.min(100, (1 - E / Er) * 100)), ratio: E > 0 ? Er / E : null };
+}
+function sumMsg(p) { return p >= 15 ? 'Çok iyi bir tasarruf performansı.' : p >= 5 ? 'İyi bir performans. Ekonomi ve Gece profilleri kombinin çalışmasını azalttı.' : 'Tasarruf düşük. Ekonomi ve Gece profillerini gözden geçir.'; }
+
+/* ===================== Grafik sayfası ===================== */
+cfg.energy = cfg.energy || { price: '', m3h: '', ref: '' };
+let CH = null;
+const WD = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'], MON = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+const p2 = n => String(n).padStart(2, '0');
+const fD = t => { const d = new Date(t); return `${d.getDate()} ${MON[d.getMonth()]}`; };
+const fT = t => { const d = new Date(t); return `${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+function rangeLabel(t0, t1) {
+  if (G.range === '24 sa') return `${fD(t0)} ${fT(t0)} – ${fD(t1)} ${fT(t1)}`;
+  const y = new Date(t1).getFullYear(); return `${fD(t0)} – ${fD(t1)} ${y}`;
+}
+function xTicks(t0, t1) {
+  const out = [], d = new Date(t0); d.setMinutes(0, 0, 0);
+  if (G.range === '24 sa') { d.setHours(Math.ceil(d.getHours() / 6) * 6); for (let t = d.getTime(); t <= t1; t += 6 * 36e5) out.push([t, fT(t)]); }
+  else if (G.range === '7 gün') { d.setHours(0); for (let t = d.getTime(); t < t1 + 864e5; t += 864e5) { const c = t + 432e5; if (c > t0 && c < t1) out.push([c, WD[new Date(c).getDay()]]); } }
+  else if (G.range === '30 gün') { d.setHours(0); let k = 0; for (let t = d.getTime(); t <= t1; t += 864e5) { if (t >= t0 && new Date(t).getDate() % 5 === 0) out.push([t, fD(t)]); k++; } }
+  else { d.setHours(0); d.setDate(1); for (let m = 0; m < 14; m++) { const t = new Date(d.getFullYear(), d.getMonth() + m, 1).getTime(); if (t >= t0 && t <= t1) out.push([t, MON[new Date(t).getMonth()]]); } }
+  return out;
+}
+function kombiIntervals(t0, t1) {
+  const d = ARCH.durum, pre = lastBefore(d, t0), o = []; let st = pre ? pre.k : null, from = t0;
+  for (const r of inWin(d, t0, t1)) { if (st === 1 && r.k !== 1) o.push([from, r.t]); if (r.k === 1 && st !== 1) from = r.t; if (r.k !== null) st = r.k; }
+  if (st === 1) o.push([from, Math.min(t1, Date.now())]); return o;
+}
+function buildChart() {
+  const [t0, t1] = winOf(), NB = 140, bw = (t1 - t0) / NB, X0 = 34, W = 318;
+  const vs = inWin(ARCH.veri, t0, t1), agg = key => { const s = new Array(NB).fill(0), c = new Array(NB).fill(0); vs.forEach(r => { if (r[key] === null) return; const i = Math.min(NB - 1, Math.floor((r.t - t0) / bw)); s[i] += r[key]; c[i]++; }); return s.map((x, i) => c[i] ? x / c[i] : null); };
+  const os = agg('os'), ds = agg('ds'), on = agg('on'), dn = agg('dn');
+  const x = t => X0 + (W - X0) * (t - t0) / (t1 - t0), xb = i => X0 + (W - X0) * (i + 0.5) / NB;
+  const dur = ARCH.durum, tgPts = []; { const pre = lastBefore(dur, t0); let cur = pre && pre.h !== null ? pre.h : null; if (cur !== null) tgPts.push([t0, cur]); for (const r of inWin(dur, t0, t1)) { if (r.h !== cur) { if (cur !== null) tgPts.push([r.t, cur]); if (r.h !== null) tgPts.push([r.t, r.h]); cur = r.h; } } if (cur !== null) tgPts.push([Math.min(t1, Date.now()), cur]); }
+  const tgAt = t => { const r = lastBefore(dur, t + 1); return r ? r.h : null; };
+  const tv = [...os, ...ds, ...tgPts.map(p => p[1])].filter(v => v !== null);
+  let tlo = tv.length ? Math.floor(Math.min(...tv)) - 1 : 10, thi = tv.length ? Math.ceil(Math.max(...tv)) + 1 : 30; if (thi - tlo < 8) { const m = (thi + tlo) / 2; tlo = Math.floor(m - 4); thi = tlo + 8; }
+  const hv = [...on, ...dn].filter(v => v !== null);
+  let hlo = hv.length ? Math.floor((Math.min(...hv) - 5) / 10) * 10 : 20, hhi = hv.length ? Math.ceil((Math.max(...hv) + 5) / 10) * 10 : 80; if (hhi - hlo < 30) hhi = hlo + 30; hlo = Math.max(0, hlo); hhi = Math.min(100, Math.max(hhi, hlo + 30));
+  const TH = 150, HH = 90; let y = 0; const pt = G.temp ? { y0: 0, h: TH } : null; if (pt) y = TH + 22; const ph = G.hum ? { y0: y, h: HH } : null; if (ph) y += HH + 4;
+  const H = (pt || ph) ? y + 18 : 40, labY = H - 4;
+  const ty = v => pt.y0 + pt.h * (1 - (v - tlo) / (thi - tlo)), hy = v => ph.y0 + ph.h * (1 - (v - hlo) / (hhi - hlo));
+  let s = `<svg id="gsvg" width="100%" viewBox="0 0 ${W} ${H}" style="touch-action:pan-y;display:block" role="img" aria-label="${G.range} sıcaklık ve nem grafiği">`;
+  const grid = (lo, hi, y0, h, f, step, unit) => { for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) { const yy = y0 + h * (1 - (v - lo) / (hi - lo)); s += `<line x1="${X0}" y1="${yy.toFixed(1)}" x2="${W}" y2="${yy.toFixed(1)}" stroke="#252E3A"/><text x="0" y="${(yy + 4).toFixed(1)}" font-size="11" fill="#A3AFBD">${unit(v)}</text>`; } };
+  if (pt) grid(tlo, thi, pt.y0, pt.h, ty, (thi - tlo) <= 10 ? 1 : (thi - tlo) <= 20 ? 2 : 5, v => v + '°');
+  if (ph) grid(hlo, hhi, ph.y0, ph.h, hy, 10, v => '%' + v);
+  const probe = os.some(v => v !== null) || on.some(v => v !== null) || ds.some(v => v !== null);
+  // boşluklar
+  const first = ARCH.veri.length ? ARCH.veri[0].t : null, last = ARCH.veri.length ? ARCH.veri[ARCH.veri.length - 1].t : null, gaps = [];
+  { let i = 0; const any = i => os[i] !== null || ds[i] !== null || on[i] !== null || dn[i] !== null; while (i < NB) { if (!any(i)) { let j = i; while (j < NB && !any(j)) j++; const run = j - i, ta = t0 + i * bw, tb = t0 + j * bw; if (run >= 3 && !(j === NB && tb >= Date.now() - 2 * bw)) gaps.push([ta, tb, run]); i = j; } else i++; } }
+  gaps.forEach(([ta, tb]) => { [pt, ph].forEach(p => { if (p) s += `<rect x="${x(ta).toFixed(1)}" y="${p.y0}" width="${(x(tb) - x(ta)).toFixed(1)}" height="${p.h}" fill="url(#hat)" opacity=".35"/>`; }); });
+  s += '<defs><pattern id="hat" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="#5B6678" stroke-width="2"/></pattern></defs>';
+  const line = (arr, f, col, w, dash) => { let seg = []; const segs = [seg]; arr.forEach((v, i) => { if (v === null) { if (seg.length) { seg = []; segs.push(seg); } } else seg.push(`${xb(i).toFixed(1)},${f(v).toFixed(1)}`); }); segs.filter(a => a.length > 1).forEach(a => { s += `<polyline points="${a.join(' ')}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"/>`; }); };
+  if (pt) {
+    line(ds, ty, '#7F8B99', 2);
+    if (tgPts.length > 1) s += `<polyline points="${tgPts.map(p => `${x(p[0]).toFixed(1)},${ty(p[1]).toFixed(1)}`).join(' ')}" fill="none" stroke="#F2F5F8" stroke-width="1.5" stroke-dasharray="5 4" opacity=".85"/>`;
+    line(os, ty, '#FF8A3D', 2.5);
+    kombiIntervals(t0, t1).forEach(([a, b]) => { s += `<rect x="${x(a).toFixed(1)}" y="${TH + 8}" width="${Math.max(1.6, x(b) - x(a)).toFixed(1)}" height="8" rx="1" fill="#FF8A3D"/>`; });
+  }
+  if (ph) { line(dn, hy, '#7F8B99', 2); line(on, hy, '#4DA3FF', 2.5); }
+  xTicks(t0, t1).forEach(([t, l]) => { s += `<text x="${x(t).toFixed(1)}" y="${labY}" text-anchor="middle" font-size="11" fill="#A3AFBD">${l}</text>`; });
+  const plotBottom = ph ? ph.y0 + ph.h : pt ? TH : 0;
+  if (pt || ph) s += `<line id="cur-l" x1="0" y1="0" x2="0" y2="${plotBottom}" stroke="#FF8A3D" stroke-width="1.5" opacity=".8"/>${pt ? '<circle id="cur-d1" r="5" cx="0" cy="0" fill="#FF8A3D" stroke="#0F1419" stroke-width="2"/>' : ''}${ph ? '<circle id="cur-d2" r="5" cx="0" cy="0" fill="#4DA3FF" stroke="#0F1419" stroke-width="2"/>' : ''}`;
+  s += '</svg>';
+  let li = NB - 1; while (li > 0 && os[li] === null && on[li] === null) li--;
+  CH = { t0, t1, NB, os, ds, on, dn, tgAt, x0: X0, W, ty: pt ? ty : null, hy: ph ? hy : null, initF: (li + 0.5) / NB, probe };
+  return { svg: s, vs, gaps: gaps.filter(g => first !== null && g[0] >= first && g[1] <= (last || 0) + 3 * bw && (g[1] - g[0]) >= 6 * 36e5), t0, t1 };
+}
+function setCursor(f) {
+  if (!CH) return; f = Math.max(0, Math.min(1, f));
+  const i = Math.min(CH.NB - 1, Math.floor(f * CH.NB)), t = CH.t0 + f * (CH.t1 - CH.t0), cx = CH.x0 + (CH.W - CH.x0) * f;
+  const set = (id, a, v) => { const e = $('#' + id); if (e) e.setAttribute(a, v); };
+  set('cur-l', 'x1', cx.toFixed(1)); set('cur-l', 'x2', cx.toFixed(1));
+  if (CH.ty && CH.os[i] !== null) { set('cur-d1', 'cx', cx.toFixed(1)); set('cur-d1', 'cy', CH.ty(CH.os[i]).toFixed(1)); } else set('cur-d1', 'cy', -20);
+  if (CH.hy && CH.on[i] !== null) { set('cur-d2', 'cx', cx.toFixed(1)); set('cur-d2', 'cy', CH.hy(CH.on[i]).toFixed(1)); } else set('cur-d2', 'cy', -20);
+  const txt = (id, v) => { const e = $('#' + id); if (e) e.textContent = v; }, d = new Date(t), tg = CH.tgAt(t);
+  txt('lg-t', G.range === '24 sa' || G.range === '7 gün' ? `${WD[d.getDay()]} ${fD(t)} ${fT(t)}` : `${fD(t)} ${d.getFullYear()}`);
+  txt('lg-os', CH.os[i] === null ? '—' : CH.os[i].toFixed(1) + '°'); txt('lg-tg', tg === null || tg === undefined ? '—' : tg.toFixed(1) + '°');
+  txt('lg-ds', CH.ds[i] === null ? '—' : CH.ds[i].toFixed(1) + '°'); txt('lg-on', CH.on[i] === null ? '—' : '%' + Math.round(CH.on[i]));
+}
+function grafikBind() {
+  const el = $('#gsvg'); if (!el || !CH) return;
+  const upd = e => { const r = el.getBoundingClientRect(); setCursor(((e.clientX - r.left) / r.width * CH.W - CH.x0) / (CH.W - CH.x0)); };
+  el.addEventListener('pointerdown', upd); el.addEventListener('pointermove', e => { if (e.buttons || e.pointerType === 'touch') upd(e); });
+  setCursor(CH.initF);
+}
+const lgi = (id, col, label, dash) => `<div style="display:flex;flex-direction:column;gap:2px"><div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)">${dash ? `<span style="width:14px;border-top:2px dashed ${col}"></span>` : `<span style="width:10px;height:10px;border-radius:2px;background:${col}"></span>`}${label}</div><div id="${id}" style="font-size:17px;font-weight:600">—</div></div>`;
+const gstat = (icon, color, title, v, hi, lo) => `<div class="card" style="gap:4px;padding:12px 14px"><div style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)">${ic(icon, 20, color)}${title}</div><div style="font-size:30px;font-weight:600;line-height:36px">${v}</div><div style="font-size:12px;color:var(--muted)">Ortalama</div><div style="display:flex;gap:14px;font-size:14px;font-weight:500"><span style="display:flex;align-items:center;gap:3px;color:#FF8A3D">${ic('up', 16, '#FF8A3D')}${hi}</span><span style="display:flex;align-items:center;gap:3px;color:#4DA3FF">${ic('dn', 16, '#4DA3FF')}${lo}</span></div></div>`;
+ICON.up = p('M12 19V5M5 12l7-7 7 7'); ICON.dn = p('M12 5v14M19 12l-7 7-7-7');
+ICON.sync = p('M21 12a9 9 0 0 0-15-6.7L3 8M3 3v5h5M3 12a9 9 0 0 0 15 6.7L21 16M21 21v-5h-5'); ICON.download = p('M12 3v12M7 10l5 5 5-5M5 21h14'); ICON.upload = p('M12 15V3M7 8l5-5 5 5M5 21h14');
+ICON.archive = '<rect x="3" y="4" width="18" height="5" rx="1"/>' + p('M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4'); ICON.left = p('M15 18l-6-6 6-6'); ICON.warn = p('M12 3l10 18H2zM12 10v5M12 18v.01');
+function fmtDur(ms) { const m = Math.round(ms / 60000); return `${Math.floor(m / 60)} sa ${m % 60} dk`; }
+function grafikHTML() {
+  const ch = buildChart(), { vs, t0, t1 } = ch, L = RANGES[G.range], days = L / 864e5;
+  const sT = stat(vs, 'os'), sD = stat(vs, 'ds'), sH = stat(vs, 'on'), rt = runtimeMs(t0, t1), sv = saving(t0, t1);
+  const ff = (st, k, d, pre, suf) => st ? { a: pre + st[k === 'avg' ? 'avg' : k].toFixed(d) + suf } : { a: '—' };
+  const fm = (st, d, pre, suf) => st ? [pre + st.avg.toFixed(d) + suf, pre + st.max.toFixed(d) + suf, pre + st.min.toFixed(d) + suf] : ['—', '—', '—'];
+  const a1 = fm(sT, 1, '', '°'), a2 = fm(sD, 1, '', '°'), a3 = fm(sH, 0, '%', '');
+  const en = cfg.energy || {}; let cost = '';
+  if (sv && sv.ratio && Number(en.m3h) > 0) { const use = rt / 36e5 * Number(en.m3h), saved = (rt * (sv.ratio - 1)) / 36e5 * Number(en.m3h); cost = `Tahmini tüketim ≈ ${use.toFixed(0)} m³` + (saved > 0 ? `, tasarruf ≈ ${saved.toFixed(0)} m³` + (Number(en.price) > 0 ? ` (≈ ₺${(saved * Number(en.price)).toFixed(0)})` : '') : ''); }
+  const nd = ARCH.veri.length ? Math.max(1, Math.ceil((ARCH.veri[ARCH.veri.length - 1].t - ARCH.veri[0].t) / 864e5)) : 0;
+  const lastCsv = store.get('termostat.lastCsv', null), csvAge = lastCsv ? Math.floor((Date.now() - lastCsv) / 864e5) : null;
+  const sy = S.sync, busy = sy.running;
+  const ab = (icn, label, act, dis) => `<button class="btn ghost" style="flex:1;height:64px;border-radius:14px;display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;font-size:13px;${dis ? 'opacity:.4' : ''}" ${dis ? 'disabled' : ''} data-act="${act}">${ic(icn, 22)}${label}</button>`;
+  return `<div class="page">${hdr('Grafik')}
+<div style="display:flex;gap:4px;background:var(--surface);border-radius:12px;padding:2px;flex:none">${Object.keys(RANGES).map(k => `<button class="chip ${G.range === k ? 'on' : ''}" style="flex:1;border-radius:10px;border-width:2px;border-color:${G.range === k ? 'var(--orange)' : 'transparent'};height:44px" aria-pressed="${G.range === k}" data-act="range:${k}">${k}</button>`).join('')}</div>
+<div style="display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:14px;padding:4px;flex:none"><button class="iconbtn" data-act="gprev" aria-label="Önceki dönem">${ic('left', 24)}</button><div style="flex:1;text-align:center;font-size:16px;font-weight:500">${rangeLabel(t0, t1)}</div><button class="iconbtn" data-act="gnext" aria-label="Sonraki dönem" ${G.off === 0 ? 'disabled style="opacity:.3"' : ''}>${ic('right', 24)}</button></div>
+<div class="chips" style="flex:none">${[['temp', 'Sıcaklık'], ['hum', 'Nem']].map(([k, l]) => `<button class="chip ${G[k] ? 'on' : ''}" aria-pressed="${G[k]}" data-act="gtgl:${k}" style="display:flex;align-items:center;gap:6px">${G[k] ? ic('check', 18, '#FF8A3D') : ''}${l}</button>`).join('')}</div>
+<div class="card" style="gap:10px"><div id="lg-t" style="font-size:13px;color:var(--muted)">&nbsp;</div><div style="display:flex;justify-content:space-between">${lgi('lg-os', '#FF8A3D', 'Oda')}${lgi('lg-tg', '#F2F5F8', 'Hedef', true)}${lgi('lg-ds', '#7F8B99', 'Dış')}${lgi('lg-on', '#4DA3FF', 'Oda nem')}</div>
+<div id="gchart">${ch.svg}</div>${!ch.vs.length ? '<div class="note" role="status">' + ic('info', 20, '#A3AFBD') + '<span>Bu aralıkta veri yok</span></div>' : ''}
+<div class="note" style="font-size:12px"><span style="width:18px;height:8px;border-radius:2px;background:#FF8A3D;display:inline-block"></span>Kombi yanıyor</div>
+${ch.gaps.slice(0, 3).map(g => `<div class="note" style="color:#FFB020">${ic('warn', 18, '#FFB020')}${fD(g[0])}${fD(g[0]) === fD(g[1]) ? '' : ' – ' + fD(g[1])} arası veri yok</div>`).join('')}</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${gstat('home', '#FF8A3D', 'İç sıcaklık', a1[0], a1[1], a1[2])}${gstat('suncloud', '#A3AFBD', 'Dış sıcaklık', a2[0], a2[1], a2[2])}${gstat('drop', '#4DA3FF', 'İç nem', a3[0], a3[1], a3[2])}
+<div class="card" style="gap:4px;padding:12px 14px"><div style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)">${ic('flame', 20, '#FF8A3D')}Kombi çalışma</div><div style="font-size:30px;font-weight:600;line-height:36px">${ARCH.durum.length ? fmtDur(rt) : '—'}</div><div style="font-size:12px;color:var(--muted)">Toplam</div><div style="font-size:14px;font-weight:500;color:var(--muted)">${ARCH.durum.length ? 'Günde ort. ' + fmtDur(rt / days) : ''}</div></div></div>
+<div class="card" style="gap:8px"><div class="row" style="min-height:0"><div style="display:flex;align-items:center;gap:10px">${ic('leaf', 24, '#3DDC97')}<span style="font-size:16px;font-weight:600">Tahmini tasarruf</span></div><button class="iconbtn" style="margin:-8px -10px -8px 0;color:var(--muted)" data-act="energy" aria-label="Tasarruf ayarları">${ic('gear', 22)}</button></div>
+<div style="font-size:44px;font-weight:600;color:#3DDC97;line-height:48px;text-align:center">${sv ? '%' + Math.round(sv.pct) : '—'}</div>
+<div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:14px;color:#D3DAE2;text-align:center">${sv ? esc(sumMsg(sv.pct)) : 'Tasarruf için en az bir günlük veri gerekli.'}</div>${cost ? `<div class="hint" style="margin:0;text-align:center">${esc(cost)}</div>` : ''}</div>
+<div class="card" style="gap:10px"><div class="row" style="min-height:0"><div style="display:flex;align-items:center;gap:10px">${ic('archive', 24, '#A3AFBD')}<span style="font-size:16px;font-weight:600">Arşiv</span></div><span style="font-size:16px;font-weight:600">${archReady ? (nd ? nd + ' gün' : 'Boş') : 'Yükleniyor'}</span></div>
+${busy ? `<div style="font-size:14px;color:var(--muted)">${esc(sy.msg)} · %${sy.pct}</div><div style="height:8px;border-radius:4px;background:#2B3440"><div style="width:${sy.pct}%;height:8px;border-radius:4px;background:var(--orange)"></div></div>` : `<div style="font-size:14px;color:var(--muted)">${sy.last ? 'Son senkron ' + fT(sy.last) + (new Date(sy.last).toDateString() === new Date().toDateString() ? '' : ' · ' + fD(sy.last)) : 'Henüz senkron yapılmadı'}</div>`}
+${sy.err ? `<div class="note" style="color:#FFB020;font-size:13px">${ic('warn', 18, '#FFB020')}<span>${esc(sy.err)}</span></div>` : ''}
+${nd && (csvAge === null || csvAge > 30) ? `<div class="note" style="font-size:13px">${ic('info', 18, '#A3AFBD')}<span>${csvAge === null ? 'Henüz CSV yedeği alınmadı.' : csvAge + ' gündür CSV yedeği alınmadı.'}</span></div>` : ''}
+<div style="display:flex;gap:8px">${ab('sync', 'Güncelle', 'sync', busy)}${ab('download', 'CSV indir', 'csvdl', busy)}<label class="btn ghost" style="flex:1;height:64px;border-radius:14px;display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;font-size:13px;cursor:pointer;${busy ? 'opacity:.4;pointer-events:none' : ''}">${ic('upload', 22)}CSV yükle<input id="csv-file" type="file" accept=".csv,text/csv" style="display:none"></label></div></div>
+${ui.sheet === 'energy' ? energySheet() : ''}</div>`;
+}
+function energySheet() {
+  const e = cfg.energy || {};
+  return `<div class="scrim" data-act="sheetclose"></div><div class="sheet" role="dialog" aria-label="Tasarruf ayarları"><div class="grab"></div><div style="font-size:18px;font-weight:600;margin-bottom:6px">Tasarruf ayarları</div>
+<div class="field"><label for="e-price">Gaz birim fiyatı (₺/m³)</label><input id="e-price" inputmode="decimal" value="${esc(e.price)}" placeholder="boş bırakılırsa ₺ hesaplanmaz"></div>
+<div class="field"><label for="e-m3h">Kombi saatlik tüketim (m³/sa)</label><input id="e-m3h" inputmode="decimal" value="${esc(e.m3h)}" placeholder="örnek 1.5"></div>
+<div class="field"><label for="e-ref">Referans sıcaklık (°C)</label><input id="e-ref" inputmode="decimal" value="${esc(e.ref)}" placeholder="boşsa Konfor sıcaklığı"></div>
+<span class="hint">Tasarruf, hedefin referans sıcaklığa göre kaç derece-saat azalttığından hesaplanan bir tahmindir. Kombi gücünü modüle ediyorsa gerçek gaz tüketimi farklı olur. Gaz sayacıyla bir ay karşılaştırıp saatlik tüketimi düzelt.</span>
+<button class="btn" style="width:100%;margin-top:10px" data-act="energysave">Kaydet</button></div>`;
+}
+
+/* ---------- Çizim ve olaylar ---------- */
+let lastView = '';
+function render() {
+  const v = view(), app = $('#app');
+  const titles = {};
+  let html;
+  if (v.name === 'brokers') html = brokersHTML();
+  else if (v.name === 'brokeredit') html = brokerEditHTML(v.arg);
+  else if (v.name === 'terminal') html = termHTML();
+  else if (v.name === 'grafik') html = grafikHTML();
+  else if (v.name === 'kontrol') html = kontrolHTML();
+  else if (v.name === 'program') html = programHTML();
+  else if (v.name === 'sistem') html = sistemHTML();
+  else if (v.name === 'kalibrasyon') html = kalibHTML();
+  else if (titles[v.name]) html = stubHTML(titles[v.name]);
+  else html = homeHTML();
+  const old = $('.page'), sc = old && lastView === v.name ? old.scrollTop : 0;
+  app.innerHTML = html;
+  const pg = $('.page'); if (pg) pg.scrollTop = sc;
+  lastView = v.name;
+  if (v.name === 'terminal') termFill();
+  if (v.name === 'grafik') grafikBind();
+}
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const i = el.dataset.act.indexOf(':'), act = i < 0 ? el.dataset.act : el.dataset.act.slice(0, i), arg = i < 0 ? '' : el.dataset.act.slice(i + 1);
+  switch (act) {
+    case 'menu': ui.menu = true; ui.balloon = null; render(); break;
+    case 'close': ui.menu = false; ui.balloon = null; render(); break;
+    case 'go': ui.menu = false; ui.balloon = null; go(arg); break;
+    case 'back': go({ brokeredit: 'brokers', kalibrasyon: 'sistem' }[view().name] || 'home'); break;
+    case 'balloon': ui.balloon = ui.balloon === arg ? null : arg; render(); break;
+    case 'reset': sendCmd({ reset: 1 }); ui.balloon = null; render(); toast('Sıfırlama komutu gönderildi.'); break;
+    case 'bmenu': ui.brokerMenu = ui.brokerMenu === arg ? null : arg; render(); break;
+    case 'bedit': ui.brokerMenu = null; go('brokeredit/' + arg); break;
+    case 'bconn': {
+      ui.brokerMenu = null;
+      if (cfg.active === arg && S.conn === 'bagli') { disconnect(); setConn('kapali'); }
+      else { cfg.active = arg; saveCfg(); if (S.demo) demoStop(); backoff = 0; connect(); }
+      render(); break;
+    }
+    case 'bdel': {
+      ui.brokerMenu = null;
+      if (cfg.brokers.length > 1 && confirm('Bu broker silinsin mi?')) {
+        const wasActive = cfg.active === arg; cfg.brokers = cfg.brokers.filter(b => b.id !== arg);
+        if (wasActive) { disconnect(); cfg.active = cfg.brokers[0].id; setConn('kapali'); }
+        saveCfg();
+      }
+      render(); break;
+    }
+    case 'badd': { const b = newBroker(); b.name = 'Yeni broker'; cfg.brokers.push(b); saveCfg(); go('brokeredit/' + b.id); break; }
+    case 'demotoggle': S.demo ? demoStop() : demoStart('normal'); break;
+    case 'demo': demoStart(arg); break;
+    case 'tgl': el.setAttribute('aria-checked', el.getAttribute('aria-checked') !== 'true'); break;
+    case 'eye': { const f = $('#f-key'); f.type = f.type === 'password' ? 'text' : 'password'; break; }
+    case 'bsave': saveBroker(arg); break;
+    case 'tclear': LOG.length = 0; termFill(); break;
+    case 'tsend': {
+      const txt = $('#t-msg').value.trim(); if (!txt) return toast('Mesaj boş.');
+      let o; try { o = JSON.parse(txt); } catch (err) { return toast('Geçerli bir JSON değil: ' + err.message); }
+      publish($('#t-to').value, JSON.stringify(o)); break;
+    }
+    case 'keyssave': {
+      let o; try { o = JSON.parse($('#t-keys').value); } catch (err) { return toast('Geçerli bir JSON değil: ' + err.message); }
+      if (!o || typeof o !== 'object' || Array.isArray(o) || Object.values(o).some(x => typeof x !== 'string')) return toast('Her değer bir metin olmalı.');
+      cfg.keys = Object.assign({}, DEFAULT_KEYS, o); saveCfg(); toast('Alan eşlemesi kaydedildi.'); break;
+    }
+    case 'mode': setVal('mod', Number(arg), 0); break;
+    case 'step': { const [n, d, lo, hi, dec] = arg.split(':'); stepVal(n, Number(d), Number(lo), Number(hi), Number(dec)); break; }
+    case 'sheet': ui.sheet = arg; render(); break;
+    case 'timeopen': { const [key, name] = arg.split(':'), c = parseClock(val(key)); if (c === null) break; ui.tp = { key, name, h: Math.floor(c / 60), m: c % 60 }; ui.sheet = 'time'; render(); break; }
+    case 'timesave': { const h = Number($('#tp-h').value), m = Number($('#tp-m').value), key = ui.tp && ui.tp.key; ui.sheet = null; ui.tp = null; if (key) setVal(key, `${h}:${String(m).padStart(2, '0')}`, 0); else render(); break; }
+    case 'sheetclose': ui.sheet = null; render(); break;
+    case 'pick': { const j = arg.lastIndexOf(':'); ui.sheet = null; setVal(arg.slice(0, j), Number(arg.slice(j + 1)), 0); break; }
+    case 'pwtoggle': setVal('pencere_koruma', Number(val('pencere_koruma')) === 1 ? 0 : 1, 0); break;
+    case 'range': G.range = arg; G.off = 0; render(); break;
+    case 'gprev': G.off++; render(); break;
+    case 'gnext': if (G.off > 0) { G.off--; render(); } break;
+    case 'gtgl': G[arg] = !G[arg]; render(); break;
+    case 'sync': syncNow(true); break;
+    case 'csvdl': downloadCSV(); render(); break;
+    case 'energy': ui.sheet = 'energy'; render(); break;
+    case 'energysave': { const g = i => $('#' + i).value.trim().replace(',', '.'); cfg.energy = { price: g('e-price'), m3h: g('e-m3h'), ref: g('e-ref') }; saveCfg(); ui.sheet = null; render(); toast('Kaydedildi.'); break; }
+    case 'keysreset': cfg.keys = Object.assign({}, DEFAULT_KEYS); saveCfg(); render(); toast('Varsayılana dönüldü.'); break;
+  }
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t && t.id === 'csv-file' && t.files && t.files[0]) {
+    t.files[0].text().then(tx => { try { const n = csvImport(tx); toast(n ? `${n} kayıt içe aktarıldı.` : 'Dosyada geçerli kayıt bulunamadı.'); } catch (err) { toast('CSV okunamadı: ' + err.message); } render(); });
+    return;
+  } if (t && ui.tp && (t.id === 'tp-h' || t.id === 'tp-m')) { ui.tp[t.id === 'tp-h' ? 'h' : 'm'] = Number(t.value); return; }
+  if (!t || !t.dataset || !t.dataset.time || !t.value) return;
+  const [h, m] = t.value.split(':'); setVal(t.dataset.time, `${Number(h)}:${m}`, 0);
+});
+window.addEventListener('hashchange', () => { ui.sheet = null; ui.menu = false; ui.balloon = null; ui.brokerMenu = null; render(); if (view().name === 'grafik' && (!S.sync.last || Date.now() - S.sync.last > 120000)) syncNow(false); });
+document.addEventListener('visibilitychange', () => {
+  const b = activeBroker();
+  if (!document.hidden && !S.demo && S.conn !== 'bagli' && S.conn !== 'baglaniyor' && b.autoConnect && !S.authError && Date.now() - lastAttempt > 5000 && canConnect(b)) { backoff = 0; connect(); }
+});
+setInterval(() => { const n = view().name; if (n === 'home') render(); else if (n === 'terminal') { const el = $('#t-stat'); if (el) el.textContent = S.demo ? 'Demo veri açık' : ({ bagli: 'Bağlı', baglaniyor: 'Bağlanıyor…', hata: 'Bağlı değil: ' + S.connMsg, kapali: 'Bağlı değil' }[S.conn]); } }, 30000);
+
+/* ---------- Başlat ---------- */
+render();
+archInit();
+setInterval(() => syncNow(false), 15 * 60000);
+{
+  const b = activeBroker();
+  if (b.autoConnect && canConnect(b)) connect();
+  else if (!canConnect(b)) setTimeout(() => toast('Başlamak için Broker sayfasından Adafruit IO kullanıcı adı ve anahtarını gir, ya da Demo’yu aç.'), 600);
+}
+
+</script>
+</body>
+</html>
