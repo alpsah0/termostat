@@ -101,9 +101,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .toast{position:fixed;left:50%;transform:translateX(-50%);width:min(390px,calc(100% - 40px));bottom:calc(24px + env(safe-area-inset-bottom));background:#263041;border-radius:14px;padding:12px 14px;font-size:14px;z-index:40}
 </style>
 </head>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b1e3a">
+<link rel="apple-touch-icon" href="icon-192.png">
 <body>
 <div id="app"></div>
 <script>
+
 /*******************************************************************************
  * Copyright (c) 2013, 2016 IBM Corp.
  *
@@ -1171,5 +1175,35 @@ setInterval(() => syncNow(false), 15 * 60000);
 }
 
 </script>
+<script>
+if ('serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  function showVer(v) {
+    let el = document.getElementById('pwa-ver');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'pwa-ver';
+      el.style.cssText = 'position:fixed;left:8px;bottom:calc(4px + env(safe-area-inset-bottom,0px));font:10px/1 sans-serif;opacity:.4;color:#9fb3c8;pointer-events:none;z-index:9999';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'v' + v;
+  }
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data && e.data.type === 'version') showVer(e.data.version);
+  });
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController && !reloaded) { reloaded = true; location.reload(); }
+  });
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+    }).catch(() => {});
+    navigator.serviceWorker.ready.then(r => { if (r.active) r.active.postMessage('version'); });
+  });
+}
+</script>
+
 </body>
+
 </html>
